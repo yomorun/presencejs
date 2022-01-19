@@ -12,12 +12,12 @@
 
 `Presencejs` is a JavaScript library that allows you to build real-time web applications quickly, the server is built atop of [YoMo](https://github.com/yomorun/yomo), which provide secure, low-latency, and high-performance geo-distributed services.
 
-- **Secure**, **low-latency** and **high-performance**
-- **Real-time** experience
-- Revalidation on network recovery
-- Keep Connected
-- Built-in error retry
-- TypeScript
+-   **Secure**, **low-latency** and **high-performance**
+-   **Real-time** experience
+-   Revalidation on network recovery
+-   Keep Connected
+-   Built-in error retry
+-   TypeScript
 
 ...and a lot more.
 
@@ -57,26 +57,70 @@ For CDN, you can use [skypack](https://www.skypack.dev): [https://cdn.skypack.de
 
 The client need to authenticate with YoMo to establish a realtime connection. The following code sample uses a demo YoMo's server(`wss://presence.yomo.dev`) and public Key to authenticate and print the message `Connected to YoMo!` when you’ve successfully connected.
 
+#### How do I get a token?
+
+If you build your application using next.js, then you can use [API Routes](https://nextjs.org/docs/api-routes/introduction) to get the access token.
+For example, the following API route `pages/api/auth.js` returns a json response with a status code of 200:
+
+```js
+export default async function handler(req, res) {
+    if (req.method === 'GET') {
+        const response = await fetch('https://presence.yomo.dev/api/v1/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                app_id: process.env.PRESENCE_APP_ID,
+                app_secret: process.env.PRESENCE_APP_SECRET,
+            }),
+        });
+        const data = await response.json();
+        res.status(200).json(data.data);
+    } else {
+        // Handle any other HTTP method
+    }
+}
+```
+
+Response data:
+
+```json
+{
+    "token": "eyJhbGciOiJIUzI1..."
+}
+```
+
+#### Create a `Presence` instance.
+
 ```js
 import { Presence } from '@yomo/presencejs';
 
-interface PresenceOption {
-    // Authentication
-    auth?: {
-        // Certification Type
-        type: 'publickey' | 'token';
-        // The public key in your Allegro Mesh project.
-        publicKey: string;
-    };
-    // The reconnection interval value.
-    reconnectInterval?: number;
-    // The reconnection attempts value.
-    reconnectAttempts?: number;
-}
+// new Presence(host: string, option?: {
+//     // Authentication
+//     auth?: {
+//         // Certification Type
+//         type: 'publickey' | 'token',
+//         // The public key in your Allegro Mesh project.
+//         publicKey?: string,
+//         // api for getting access token
+//         endpoint?: string,
+//     };
+//     // The reconnection interval value.
+//     reconnectInterval?: number;
+//     // The reconnection attempts value.
+//     reconnectAttempts?: number;
+// }): Presence
 
 // create an instance.
-// new Presence(host: string, option?: PresenceOption): Presence
-const yomo = new Presence('wss://presence.yomo.dev');
+const yomo = new Presence('wss://presence.yomo.dev', {
+    auth: {
+        // Certification Type
+        type: 'token',
+        // api for getting access token
+        endpoint: '/api/auth',
+    },
+});
 
 yomo.on('connected', () => {
     console.log('Connected to server: ', yomo.host);
@@ -101,6 +145,12 @@ yomo.on('connected', () => {
     yomo.on$('mousemove').subscribe(data => {
         console.log('mousemove:', data);
     });
+
+    // If you want to display the latency, you can get the value of the latency like this
+    yomo.on('latency', data => {
+        const { id, latency, meshId } = data;
+        console.log('latency:', latency);
+    });
 });
 ```
 
@@ -113,9 +163,12 @@ You can use rxjs to get an observable sequence of browser event transitions，th
 import { fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+const ID = '34a1dbb5-c031-4680-926c-84a789d251e0';
+
 yomo.on('connected', () => {
     // Function for sending data to the server
     yomo.send('online', {
+        id: ID,
         x: 10,
         y: 10,
     });
@@ -124,6 +177,7 @@ yomo.on('connected', () => {
     const mousemove$ = fromEvent(document, 'mousemove').pipe(
         map(event => {
             return {
+                id: ID,
                 x: event.clientX,
                 y: event.clientY,
             };

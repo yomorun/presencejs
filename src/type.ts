@@ -9,7 +9,9 @@ export interface PresenceOption {
         // Certification Type
         type: 'publickey' | 'token';
         // The public key in your Allegro Mesh project.
-        publicKey: string;
+        publicKey?: string;
+        // api for getting access token
+        endpoint?: string;
     };
     // The reconnection interval value.
     reconnectInterval?: number;

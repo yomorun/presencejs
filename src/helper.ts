@@ -64,7 +64,7 @@ export function getProtocol(url: string) {
 export function updateQueryStringParameter(
     uri: string,
     key: string,
-    value: string
+    value: string | number | undefined
 ) {
     const re = new RegExp(`([?&])${key}=.*?(&|$)`, 'i');
     const separator = uri.indexOf('?') !== -1 ? '&' : '?';

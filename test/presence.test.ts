@@ -8,17 +8,8 @@ describe('Presence', () => {
     const ID = 'TestID';
 
     it('Testing', async () => {
-        const socketURL = 'wss://x.yomo.dev/presence';
-        const yomo = new Presence(`${socketURL}`, {
-            auth: {
-                // Certification Type.
-                // Optional values：'publickey' or 'token'.
-                // 'token' is not yet supported.
-                type: 'publickey',
-                // The public key in your Allegro Mesh project.
-                publicKey: '',
-            },
-        });
+        const socketURL = 'wss://presence.yomo.dev';
+        const yomo = new Presence(`${socketURL}`);
 
         let onlineData: any;
 

@@ -12,20 +12,21 @@ import { WebSocketMessage, PresenceOption } from './type';
 export default class Presence extends Subject<WebSocketMessage> {
     public host: string;
 
-    private socket$: WebSocketSubject<WebSocketMessage> | undefined;
-    private socketSubscription: Subscription | undefined;
+    private _wasmLoaded: boolean;
+
+    private _socket$: WebSocketSubject<WebSocketMessage> | undefined;
+    private _socketSubscription: Subscription | undefined;
+
+    private _connectionStatus$: Subject<boolean>;
 
     // Reconnection stream
-    private reconnectionObservable: Observable<number> | undefined;
-    private reconnectionSubscription: Subscription | undefined;
-    private reconnectInterval: number;
-    private reconnectAttempts: number;
+    private _reconnectionObservable: Observable<number> | undefined;
+    private _reconnectionSubscription: Subscription | undefined;
+    private _reconnectInterval: number;
+    private _reconnectAttempts: number;
 
-    private connectionStatus$: Subject<boolean>;
-
-    private wasmLoaded: boolean;
-
-    private heartTimer: Subscription | undefined;
+    private _pingSubscription: Subscription | undefined;
+    private _sendLatencySubscription: Subscription | undefined;
 
     constructor(host: string, option?: PresenceOption) {
         if (!isWSProtocol(getProtocol(host))) {
@@ -36,28 +37,23 @@ export default class Presence extends Subject<WebSocketMessage> {
 
         super();
 
-        this.host =
-            option?.auth?.type === 'publickey'
-                ? updateQueryStringParameter(
-                      host,
-                      'public_key',
-                      option.auth.publicKey
-                  )
-                : host;
+        this.host = host;
 
-        this.reconnectInterval = option?.reconnectInterval
+        this._wasmLoaded = false;
+
+        this._reconnectInterval = option?.reconnectInterval
             ? option.reconnectInterval
             : 5000;
 
-        this.reconnectAttempts = option?.reconnectAttempts
+        this._reconnectAttempts = option?.reconnectAttempts
             ? option.reconnectAttempts
             : 3;
 
-        this.connectionStatus$ = new Subject<boolean>();
-        this.connectionStatus$.subscribe({
+        this._connectionStatus$ = new Subject<boolean>();
+        this._connectionStatus$.subscribe({
             next: isConnected => {
                 if (
-                    !this.reconnectionObservable &&
+                    !this._reconnectionObservable &&
                     typeof isConnected === 'boolean' &&
                     !isConnected
                 ) {
@@ -66,15 +62,38 @@ export default class Presence extends Subject<WebSocketMessage> {
             },
         });
 
-        this.wasmLoaded = false;
-
-        this._connect();
-
-        this.heartTimer = interval(30000).subscribe(_ => {
-            if (this.socket$) {
-                this.socket$.next({ event: 'HEARTBEAT', data: 1 });
-            }
+        this._pingSubscription = interval(5000).subscribe(_ => {
+            this.send('ping', { timestamp: Date.now() });
         });
+
+        this._sendLatencySubscription = this._sendLatency();
+
+        if (option?.auth?.type === 'publickey' && option.auth.publicKey) {
+            this.host = updateQueryStringParameter(
+                host,
+                'public_key',
+                option.auth.publicKey
+            );
+            this._connect();
+        } else if (option?.auth?.type === 'token' && option.auth.endpoint) {
+            fetch(option.auth.endpoint)
+                .then(response => response.json())
+                .then((data: { token: string }) => {
+                    this.host = updateQueryStringParameter(
+                        host,
+                        'token',
+                        data.token
+                    );
+                    this._connect();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        } else {
+            throw new Error(
+                'You are not authorized, please configure `publicKey` or `endpoint`'
+            );
+        }
     }
 
     /**
@@ -87,7 +106,7 @@ export default class Presence extends Subject<WebSocketMessage> {
      */
     on<T>(event: string, cb: (data: T) => void): void {
         if (event === 'connected' || event === 'closed') {
-            this.connectionStatus$
+            this._connectionStatus$
                 .pipe(
                     distinctUntilChanged(),
                     filter(isConnected => {
@@ -138,8 +157,8 @@ export default class Presence extends Subject<WebSocketMessage> {
      * @param data
      */
     send<T>(event: string, data: T) {
-        if (this.socket$) {
-            this.socket$.next({ event, data });
+        if (this._socket$) {
+            this._socket$.next({ event, data });
         }
     }
 
@@ -174,14 +193,18 @@ export default class Presence extends Subject<WebSocketMessage> {
      * Close subscriptions, clean up
      */
     close(): void {
-        if (this.heartTimer) {
-            this.heartTimer.unsubscribe();
-            this.heartTimer = undefined;
+        if (this._pingSubscription) {
+            this._pingSubscription.unsubscribe();
+            this._pingSubscription = undefined;
         }
-        this.reconnectAttempts = 0;
+        if (this._sendLatencySubscription) {
+            this._sendLatencySubscription.unsubscribe();
+            this._sendLatencySubscription = undefined;
+        }
+        this._reconnectAttempts = 0;
         this._clearReconnection();
         this._clearSocket();
-        this.connectionStatus$.next(false);
+        this._connectionStatus$.next(false);
     }
 
     /**
@@ -190,10 +213,10 @@ export default class Presence extends Subject<WebSocketMessage> {
      * @private
      */
     private async _connect() {
-        if (!this.wasmLoaded) {
+        if (!this._wasmLoaded) {
             try {
                 await loadWasm('https://d1lxb757x1h2rw.cloudfront.net/y3.wasm');
-                this.wasmLoaded = true;
+                this._wasmLoaded = true;
             } catch (error) {
                 throw error;
             }
@@ -210,30 +233,30 @@ export default class Presence extends Subject<WebSocketMessage> {
             return (window as any).decode(tag, uint8buf);
         };
 
-        this.socket$ = new WebSocketSubject({
+        this._socket$ = new WebSocketSubject({
             url: this.host,
             serializer,
             deserializer,
             binaryType: 'arraybuffer',
             openObserver: {
                 next: () => {
-                    this.connectionStatus$.next(true);
+                    this._connectionStatus$.next(true);
                 },
             },
             closeObserver: {
                 next: () => {
                     this._clearSocket();
-                    this.connectionStatus$.next(false);
+                    this._connectionStatus$.next(false);
                 },
             },
         });
 
-        this.socketSubscription = this.socket$.subscribe({
+        this._socketSubscription = this._socket$.subscribe({
             next: msg => {
                 this.next(msg);
             },
             error: () => {
-                if (!this.socket$) {
+                if (!this._socket$) {
                     this._clearReconnection();
                     this._reconnect();
                 }
@@ -247,23 +270,25 @@ export default class Presence extends Subject<WebSocketMessage> {
      * @private
      */
     private _reconnect(): void {
-        this.reconnectionObservable = interval(this.reconnectInterval).pipe(
+        this._reconnectionObservable = interval(this._reconnectInterval).pipe(
             takeWhile(
-                (_, index) => index < this.reconnectAttempts && !this.socket$
+                (_, index) => index < this._reconnectAttempts && !this._socket$
             )
         );
 
-        this.reconnectionSubscription = this.reconnectionObservable.subscribe({
-            next: () => this._connect(),
-            error: () => undefined,
-            complete: () => {
-                this._clearReconnection();
-                if (!this.socket$) {
-                    this.complete();
-                    this.connectionStatus$.complete();
-                }
-            },
-        });
+        this._reconnectionSubscription = this._reconnectionObservable.subscribe(
+            {
+                next: () => this._connect(),
+                error: () => undefined,
+                complete: () => {
+                    this._clearReconnection();
+                    if (!this._socket$) {
+                        this.complete();
+                        this._connectionStatus$.complete();
+                    }
+                },
+            }
+        );
     }
 
     /**
@@ -272,9 +297,9 @@ export default class Presence extends Subject<WebSocketMessage> {
      * @private
      */
     private _clearSocket(): void {
-        this.socket$?.complete();
-        this.socketSubscription && this.socketSubscription.unsubscribe();
-        this.socket$ = undefined;
+        this._socket$?.complete();
+        this._socketSubscription && this._socketSubscription.unsubscribe();
+        this._socket$ = undefined;
     }
 
     /**
@@ -283,8 +308,29 @@ export default class Presence extends Subject<WebSocketMessage> {
      * @private
      */
     private _clearReconnection(): void {
-        this.reconnectionSubscription &&
-            this.reconnectionSubscription.unsubscribe();
-        this.reconnectionObservable = undefined;
+        this._reconnectionSubscription &&
+            this._reconnectionSubscription.unsubscribe();
+        this._reconnectionObservable = undefined;
+    }
+
+    /**
+     * Calculate the latency and broadcast the results
+     *
+     * @private
+     */
+    private _sendLatency() {
+        return this.on$<{ timestamp: number; meshId: string }>(
+            'pong'
+        ).subscribe(data => {
+            const { timestamp, meshId } = data;
+            if (timestamp) {
+                const rtt = Date.now() - timestamp;
+                const latency = rtt / 2;
+                this.send('latency', {
+                    latency,
+                    meshId,
+                });
+            }
+        });
     }
 }
