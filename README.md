@@ -60,25 +60,39 @@ The client need to authenticate with YoMo to establish a realtime connection. Th
 #### How do I get a token?
 
 If you build your application using next.js, then you can use [API Routes](https://nextjs.org/docs/api-routes/introduction) to get the access token.
-For example, the following API route `pages/api/auth.js` returns a json response with a status code of 200:
+For example, the following API route `pages/api/presence-auth.js` returns a json response with a status code of 200:
 
 ```js
 export default async function handler(req, res) {
     if (req.method === 'GET') {
-        const response = await fetch('https://presence.yomo.dev/api/v1/auth', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                app_id: process.env.PRESENCE_APP_ID,
-                app_secret: process.env.PRESENCE_APP_SECRET,
-            }),
-        });
-        const data = await response.json();
-        res.status(200).json(data.data);
+        try {
+            const response = await fetch('https://prsc.yomo.dev/api/v1/auth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    app_id: process.env.PRESENCE_APP_ID,
+                    app_secret: process.env.PRESENCE_APP_SECRET,
+                }),
+            });
+            const data = await response.json();
+            const token = data.data;
+            if (token) {
+                res.status(200).json(token);
+            } else {
+                res.status(400).json({ msg: data.message });
+            }
+        } catch (error) {
+            if (typeof error === 'string') {
+                res.status(500).json({ msg: error });
+            } else if (error instanceof Error) {
+                res.status(500).json({ msg: error.message });
+            }
+        }
     } else {
         // Handle any other HTTP method
+        res.status(405).json({})
     }
 }
 ```
@@ -96,29 +110,13 @@ Response data:
 ```js
 import { Presence } from '@yomo/presencejs';
 
-// new Presence(host: string, option?: {
-//     // Authentication
-//     auth?: {
-//         // Certification Type
-//         type: 'publickey' | 'token',
-//         // The public key in your Allegro Mesh project.
-//         publicKey?: string,
-//         // api for getting access token
-//         endpoint?: string,
-//     };
-//     // The reconnection interval value.
-//     reconnectInterval?: number;
-//     // The reconnection attempts value.
-//     reconnectAttempts?: number;
-// }): Presence
-
 // create an instance.
 const yomo = new Presence('wss://presence.yomo.dev', {
     auth: {
         // Certification Type
         type: 'token',
         // api for getting access token
-        endpoint: '/api/auth',
+        endpoint: '/api/presence-auth',
     },
 });
 
@@ -213,10 +211,10 @@ yomo.on('closed', () => {
 
 ## Examples
 
-- React Cursor Chat Component: [Online Preview](https://cursor-chat-example.vercel.app)
-  - https://github.com/yomorun/react-cursor-chat
-- Next.js Commerce with realtime collaboration: [Online Preview](https://commerce-ochre-sigma-86.vercel.app/)
-  - https://github.com/osdodo/commerce
+-   React Cursor Chat Component: [Online Preview](https://cursor-chat-example.vercel.app)
+    -   https://github.com/yomorun/react-cursor-chat
+-   Next.js Commerce with realtime collaboration: [Online Preview](https://commerce-ochre-sigma-86.vercel.app/)
+    -   https://github.com/osdodo/commerce
 
 ## Contributors
 
