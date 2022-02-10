@@ -8,7 +8,7 @@
     </a>
 </p>
 
-## Introduction
+## 🧬 Introduction
 
 `Presencejs` is a JavaScript library that allows you to build real-time web applications quickly, the server is built atop of [YoMo](https://github.com/yomorun/yomo), which provide secure, low-latency, and high-performance geo-distributed services.
 
@@ -23,7 +23,17 @@
 
 With `presencejs`, components will get data flow in real time. Thus, the UI will be always **fast** and **reactive**.
 
-## Quick Start
+## 🌟 Showcase
+
+- React Cursor Chat Component: 
+  - Preview: https://cursor-chat-example.vercel.app
+  - Source code: https://github.com/yomorun/react-cursor-chat
+- Next.js Commerce with realtime collaboration: 
+  - Preview: https://commerce-ochre-sigma-86.vercel.app/
+  - Source code: https://github.com/osdodo/commerce
+
+
+## 🥷🏼 Quick Start
 
 ### 1. Add `presencejs` to your web app
 
@@ -198,7 +208,7 @@ yomo.on('closed', () => {
 });
 ```
 
-## API
+## 🤹🏻‍♀️ API
 
 | Methods of instance | Description                                                     | Type                                                |
 | ------------------- | --------------------------------------------------------------- | --------------------------------------------------- |
@@ -209,14 +219,7 @@ yomo.on('closed', () => {
 | `ofRoom`            | Function for sending data streams to the server                 | `ofRoom(roomName: string, event: string)`           |
 | `close`             | A connection to YoMo can be closed once it is no longer needed. | `close(): void`                                     |
 
-## Examples
-
--   React Cursor Chat Component: [Online Preview](https://cursor-chat-example.vercel.app)
-    -   https://github.com/yomorun/react-cursor-chat
--   Next.js Commerce with realtime collaboration: [Online Preview](https://commerce-ochre-sigma-86.vercel.app/)
-    -   https://github.com/osdodo/commerce
-
-## Contributors
+## ⛷ Contributors
 
 [//]: contributor-faces
 
