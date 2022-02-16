@@ -1,14 +1,11 @@
 import { interval, Observable, Subject, Subscription } from 'rxjs';
 import { WebSocketSubject } from 'rxjs/webSocket';
-import { distinctUntilChanged, filter, map, takeWhile } from 'rxjs/operators';
+import { takeWhile } from 'rxjs/operators';
+import Transport from './transport';
 import { decoder, encoder, getAuthorizedURL, loadWasm } from './helper';
-import { EventMessage, IPresence, IPresenceOption } from './type';
+import { EventMessage, IPresenceOption } from './type';
 
-export default class WS extends Subject<EventMessage> {
-    // Service url
-    public host: string;
-    // Wasm file is loaded or not
-    private _wasmLoaded: boolean;
+export default class WS extends Transport {
     // WebSocketSubject instance
     private _socket$: WebSocketSubject<EventMessage> | undefined;
     // Socket Subscription
@@ -21,17 +18,13 @@ export default class WS extends Subject<EventMessage> {
     private _reconnectInterval: number;
     // Reconnect attempts
     private _reconnectAttempts: number;
-    // Subject for connection status stream
-    private _connectionStatus$: Subject<boolean>;
 
     constructor(host: string, option: IPresenceOption) {
-        super();
-        this.host = host;
-        this._wasmLoaded = false;
+        super(host);
         this._reconnectInterval = option?.reconnectInterval || 5000;
         this._reconnectAttempts = option?.reconnectAttempts || 3;
-        this._connectionStatus$ = new Subject<boolean>();
-        this._connectionStatus$.subscribe({
+        this.connectionStatus$ = new Subject<boolean>();
+        this.connectionStatus$.subscribe({
             next: isConnected => {
                 if (
                     !this._reconnectionObservable &&
@@ -50,60 +43,6 @@ export default class WS extends Subject<EventMessage> {
     }
 
     /**
-     * Function to handle response for given event from server
-     *
-     * @param event name of the event
-     * @param cb is the function executed when the events 'connected' and 'closed' occur
-     *
-     * @private
-     */
-    on<T>(event: string, cb: (data: T) => void): void {
-        if (event === 'connected' || event === 'closed') {
-            this._connectionStatus$
-                .pipe(
-                    distinctUntilChanged(),
-                    filter(isConnected => {
-                        return (
-                            (isConnected && event === 'connected') ||
-                            (!isConnected && event === 'closed')
-                        );
-                    })
-                )
-                .subscribe((isConnected: any) => {
-                    cb(isConnected);
-                });
-        } else {
-            this.pipe(
-                filter((message: any): boolean => {
-                    return (
-                        message.event && message.event === event && message.data
-                    );
-                })
-            ).subscribe({
-                next: (message: EventMessage): void => cb(message.data),
-                error: () => undefined,
-                complete: (): void => {},
-            });
-        }
-    }
-
-    /**
-     * Same as the `on` method, returns an observable response
-     *
-     * @param event name of the event
-     *
-     * @return {Observable<T>}
-     */
-    on$<T>(event: string): Observable<T> {
-        return this.pipe(
-            filter((message: any): boolean => {
-                return message.event && message.event === event && message.data;
-            }),
-            map(_ => _.data)
-        );
-    }
-
-    /**
      * Function for sending data to the server
      *
      * @param event name of the event
@@ -116,40 +55,13 @@ export default class WS extends Subject<EventMessage> {
     }
 
     /**
-     * Enter a room
-     *
-     * @param roomName name of the room
-     *
-     * @return {IPresence}
-     */
-    toRoom(roomName: string): IPresence {
-        this.send('TOROOM', roomName);
-        return this;
-    }
-
-    /**
-     * Function for sending data streams to the server
-     *
-     * @param roomName name of the room
-     * @param event name of the event
-     *
-     * @return (data: any) => void
-     */
-    ofRoom(roomName: string, event: string) {
-        this.toRoom(roomName);
-        return (data: any) => {
-            this.send(event, data);
-        };
-    }
-
-    /**
      * Close subscriptions, clean up
      */
     close(): void {
         this._reconnectAttempts = 0;
         this._clearReconnection();
         this._clearSocket();
-        this._connectionStatus$.next(false);
+        this.connectionStatus$.next(false);
     }
 
     /**
@@ -158,10 +70,10 @@ export default class WS extends Subject<EventMessage> {
      * @private
      */
     private async _connect() {
-        if (!this._wasmLoaded) {
+        if (!this.wasmLoaded) {
             try {
                 await loadWasm();
-                this._wasmLoaded = true;
+                this.wasmLoaded = true;
             } catch (error) {
                 throw error;
             }
@@ -174,13 +86,13 @@ export default class WS extends Subject<EventMessage> {
             binaryType: 'arraybuffer',
             openObserver: {
                 next: () => {
-                    this._connectionStatus$.next(true);
+                    this.connectionStatus$.next(true);
                 },
             },
             closeObserver: {
                 next: () => {
                     this._clearSocket();
-                    this._connectionStatus$.next(false);
+                    this.connectionStatus$.next(false);
                 },
             },
         });
@@ -241,7 +153,7 @@ export default class WS extends Subject<EventMessage> {
                     this._clearReconnection();
                     if (!this._socket$) {
                         this.complete();
-                        this._connectionStatus$.complete();
+                        this.connectionStatus$.complete();
                     }
                 },
             }
