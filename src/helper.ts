@@ -1,12 +1,12 @@
 import Go from './wasm-exec';
 import { IPresenceOption } from './type';
 
+const y3WasmPath = 'https://d1lxb757x1h2rw.cloudfront.net/y3.wasm';
+
 /**
  * Load wasm
- *
- * @param {RequestInfo} path wasm file path
  */
-export async function loadWasm(path: RequestInfo): Promise<void> {
+export async function loadWasm(): Promise<void> {
     // This is a polyfill for FireFox and Safari
     if (!WebAssembly.instantiateStreaming) {
         WebAssembly.instantiateStreaming = async (resp, importObject) => {
@@ -21,7 +21,7 @@ export async function loadWasm(path: RequestInfo): Promise<void> {
 
     try {
         const result = await WebAssembly.instantiateStreaming(
-            fetch(path),
+            fetch(y3WasmPath),
             go.importObject
         );
 
@@ -34,7 +34,7 @@ export async function loadWasm(path: RequestInfo): Promise<void> {
 /**
  * Encoder
  *
- * @private
+ * @param data
  */
 export function encoder(data: any) {
     return (window as any).encode(0x11, data).buffer;
@@ -43,7 +43,7 @@ export function encoder(data: any) {
 /**
  * Decoder
  *
- * @private
+ * @param data
  */
 export function decoder(data: any) {
     const uint8buf = new Uint8Array(data);
@@ -95,15 +95,17 @@ export function updateQueryStringParameter(
  * @returns Promise containing AuthorizedURL
  */
 export async function getAuthorizedURL(host: string, option: IPresenceOption) {
-    if (option?.auth?.type === 'publickey' && option.auth.publicKey) {
-        // `publickey` is the way to test
-        return updateQueryStringParameter(
-            host,
-            'public_key',
-            option.auth.publicKey
-        );
-    } else if (option?.auth?.type === 'token' && option.auth.endpoint) {
-        // `token` is the way to go for production environments
+    // `publickey` is the way to test
+    // if (option?.auth?.type === 'publickey' && option.auth.publicKey) {
+    //     return updateQueryStringParameter(
+    //         host,
+    //         'public_key',
+    //         option.auth.publicKey
+    //     );
+    // }
+
+    // `token` is the way to go for production environments
+    if (option?.auth?.type === 'token' && option.auth.endpoint) {
         try {
             const response = await fetch(option.auth.endpoint);
             const data = await response.json();
@@ -112,8 +114,6 @@ export async function getAuthorizedURL(host: string, option: IPresenceOption) {
             throw error;
         }
     } else {
-        throw new Error(
-            'You are not authorized, please configure `publicKey` or `endpoint`'
-        );
+        throw new Error('You are not authorized, please configure `endpoint`');
     }
 }

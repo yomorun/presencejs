@@ -150,7 +150,7 @@ export default class WT extends Subject<EventMessage> {
     private async _connect() {
         if (!this._wasmLoaded) {
             try {
-                await loadWasm('https://d1lxb757x1h2rw.cloudfront.net/y3.wasm');
+                await loadWasm();
                 this._wasmLoaded = true;
             } catch (error) {
                 throw error;
