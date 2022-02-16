@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "@yomo/presencejs ⚡️ made realtime web applications edge-aware by YoMo",
   "keywords": [
     "yomo",
@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "tsdx watch",
-    "build": "tsdx build --format esm",
+    "build": "tsdx build",
     "test": "tsdx test",
     "lint": "tsdx lint",
     "prepare": "tsdx build"
