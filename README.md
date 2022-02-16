@@ -53,7 +53,7 @@ $ yarn add @yomo/presencejs
 Using pnpm
 
 ```
-$ pmpm i @yomo/presencejs
+$ pnpm i @yomo/presencejs
 ```
 
 For CDN, you can use [skypack](https://www.skypack.dev): [https://cdn.skypack.dev/@yomo/presencejs](https://cdn.skypack.dev/@yomo/presencejs)
