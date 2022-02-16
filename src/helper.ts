@@ -1,7 +1,8 @@
 import Go from './wasm-exec';
+import { IPresenceOption } from './type';
 
 /**
- * load wasm
+ * Load wasm
  *
  * @param {RequestInfo} path wasm file path
  */
@@ -31,16 +32,26 @@ export async function loadWasm(path: RequestInfo): Promise<void> {
 }
 
 /**
- * check if the URL scheme is 'ws' or 'wss'
+ * Encoder
  *
- * @param protocol - URL's scheme
+ * @private
  */
-export function isWSProtocol(protocol: string): boolean {
-    return protocol === 'ws' || protocol === 'wss';
+export function encoder(data: any) {
+    return (window as any).encode(0x11, data).buffer;
 }
 
 /**
- * get URL's scheme
+ * Decoder
+ *
+ * @private
+ */
+export function decoder(data: any) {
+    const uint8buf = new Uint8Array(data);
+    return (window as any).decode(0x11, uint8buf);
+}
+
+/**
+ * Get URL's scheme
  *
  * @param url - the url of the socket server to connect to
  */
@@ -53,7 +64,7 @@ export function getProtocol(url: string) {
 }
 
 /**
- * update query string parameter
+ * Update query string parameter
  *
  * @param uri Uniform Resource Identifier
  * @param key parameter key
@@ -72,5 +83,37 @@ export function updateQueryStringParameter(
         return uri.replace(re, `$1${key}=${value}$2`);
     } else {
         return `${uri}${separator}${key}=${value}`;
+    }
+}
+
+/**
+ * Function for obtaining authorised URL
+ *
+ * @param host Service url
+ * @param {IPresenceOption} option
+ *
+ * @returns Promise containing AuthorizedURL
+ */
+export async function getAuthorizedURL(host: string, option: IPresenceOption) {
+    if (option?.auth?.type === 'publickey' && option.auth.publicKey) {
+        // `publickey` is the way to test
+        return updateQueryStringParameter(
+            host,
+            'public_key',
+            option.auth.publicKey
+        );
+    } else if (option?.auth?.type === 'token' && option.auth.endpoint) {
+        // `token` is the way to go for production environments
+        try {
+            const response = await fetch(option.auth.endpoint);
+            const data = await response.json();
+            return updateQueryStringParameter(host, 'token', data.token);
+        } catch (error) {
+            throw error;
+        }
+    } else {
+        throw new Error(
+            'You are not authorized, please configure `publicKey` or `endpoint`'
+        );
     }
 }

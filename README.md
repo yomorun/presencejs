@@ -18,6 +18,7 @@
 -   Keep Connected
 -   Built-in error retry
 -   TypeScript
+-   WebTransport
 
 ...and a lot more.
 
@@ -59,13 +60,13 @@ For CDN, you can use [skypack](https://www.skypack.dev): [https://cdn.skypack.de
 
 ```html
 <script type="module">
-    import { Presence } from 'https://cdn.skypack.dev/@yomo/presencejs';
+    import Presence from 'https://cdn.skypack.dev/@yomo/presencejs';
 </script>
 ```
 
 ### 2. Connect to presence server
 
-The client need to authenticate with YoMo to establish a realtime connection. The following code sample uses a demo YoMo's server(`wss://presencejs.yomo.dev`) and public Key to authenticate and print the message `Connected to YoMo!` when you’ve successfully connected.
+The client need to authenticate with YoMo to establish a realtime connection. The following code sample uses a demo YoMo's server(`https://presencejs.yomo.dev`) and public Key to authenticate and print the message `Connected to YoMo!` when you’ve successfully connected.
 
 #### How do I get a token?
 
@@ -118,10 +119,10 @@ Response data:
 #### Create a `Presence` instance.
 
 ```js
-import { Presence } from '@yomo/presencejs';
+import Presence from '@yomo/presencejs';
 
 // create an instance.
-const yomo = new Presence('wss://presence.yomo.dev', {
+const yomo = new Presence('https://presence.yomo.dev', {
     auth: {
         // Certification Type
         type: 'token',

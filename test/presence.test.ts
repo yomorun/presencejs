@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { Presence } from '../src';
+import Presence from '../src';
 
 // @ts-ignore
 globalThis.fetch = fetch;
@@ -9,7 +9,12 @@ describe('Presence', () => {
 
     it('Testing', async () => {
         const socketURL = 'wss://presence.yomo.dev';
-        const yomo = new Presence(`${socketURL}`);
+        const yomo = new Presence(`${socketURL}`, {
+            auth: {
+                type: 'publickey',
+                publicKey: '',
+            },
+        });
 
         let onlineData: any;
 

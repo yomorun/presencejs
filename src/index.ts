@@ -1,3 +1,3 @@
 import Presence from './presence';
 
-export { Presence };
+export default Presence;
