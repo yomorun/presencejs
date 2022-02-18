@@ -1,5 +1,5 @@
 import Go from './wasm-exec';
-import { IPresenceOption } from './type';
+import { PresenceOption } from './type';
 
 const y3WasmPath = 'https://d1lxb757x1h2rw.cloudfront.net/y3.wasm';
 
@@ -90,11 +90,11 @@ export function updateQueryStringParameter(
  * Function for obtaining authorised URL
  *
  * @param host Service url
- * @param {IPresenceOption} option
+ * @param {PresenceOption} option
  *
  * @returns Promise containing AuthorizedURL
  */
-export async function getAuthorizedURL(host: string, option: IPresenceOption) {
+export async function getAuthorizedURL(host: string, option: PresenceOption) {
     // `publickey` is the way to test
     // if (option?.auth?.type === 'publickey' && option.auth.publicKey) {
     //     return updateQueryStringParameter(

@@ -1,8 +1,14 @@
 import { interval, Observable, Subject, Subscription } from 'rxjs';
 import { distinctUntilChanged, filter, map, takeWhile } from 'rxjs/operators';
 import { WebSocketSubject } from 'rxjs/webSocket';
-import { decoder, encoder, getAuthorizedURL, getProtocol, loadWasm } from './helper';
-import { EventMessage, IPresenceOption } from './type';
+import {
+    decoder,
+    encoder,
+    getAuthorizedURL,
+    getProtocol,
+    loadWasm,
+} from './helper';
+import { EventMessage, PresenceOption } from './type';
 
 export default class Presence extends Subject<EventMessage> {
     // Service url
@@ -30,7 +36,7 @@ export default class Presence extends Subject<EventMessage> {
     // WebTransport Subscription
     private _wtSubscription: Subscription | undefined;
 
-    constructor(host: string, option: IPresenceOption) {
+    constructor(host: string, option: PresenceOption) {
         super();
         this.host = host;
         this.type = 'WebSocket';
@@ -57,7 +63,7 @@ export default class Presence extends Subject<EventMessage> {
 
         if (this.type === 'WebSocket') {
             this._connectionStatus$.subscribe({
-                next: (isConnected) => {
+                next: isConnected => {
                     if (
                         !this._reconnectionObservable &&
                         typeof isConnected === 'boolean' &&
@@ -70,7 +76,7 @@ export default class Presence extends Subject<EventMessage> {
         }
 
         loadWasm().then(() => {
-            getAuthorizedURL(this.host, option).then((url) => {
+            getAuthorizedURL(this.host, option).then(url => {
                 this.host = url;
                 if (this.type === 'WebSocket') {
                     this._wsConnect();
@@ -78,7 +84,7 @@ export default class Presence extends Subject<EventMessage> {
                     this._wtConnect();
                 }
             });
-        })
+        });
     }
 
     /**
@@ -94,7 +100,7 @@ export default class Presence extends Subject<EventMessage> {
             this._connectionStatus$
                 .pipe(
                     distinctUntilChanged(),
-                    filter((isConnected) => {
+                    filter(isConnected => {
                         return (
                             (isConnected && event === 'connected') ||
                             (!isConnected && event === 'closed')
@@ -131,7 +137,7 @@ export default class Presence extends Subject<EventMessage> {
             filter((message: any): boolean => {
                 return message.event && message.event === event && message.data;
             }),
-            map((_) => _.data)
+            map(_ => _.data)
         );
     }
 
@@ -217,7 +223,7 @@ export default class Presence extends Subject<EventMessage> {
         });
 
         this._socketSubscription = this._socket$.subscribe({
-            next: (msg) => {
+            next: msg => {
                 this.next(msg);
             },
             error: () => {
@@ -289,7 +295,7 @@ export default class Presence extends Subject<EventMessage> {
      * @return {Subscription}
      */
     private _ping(): Subscription {
-        return interval(5000).subscribe((_) => {
+        return interval(5000).subscribe(_ => {
             this.send('ping', { timestamp: Date.now() });
         });
     }
@@ -302,7 +308,7 @@ export default class Presence extends Subject<EventMessage> {
      * @return {Subscription}
      */
     private _pong(): Subscription {
-        return this.on$<any>('pong').subscribe((data) => {
+        return this.on$<any>('pong').subscribe(data => {
             const { timestamp, meshId } = data;
             if (timestamp) {
                 // Calculate the latency and broadcast the results
@@ -326,8 +332,7 @@ export default class Presence extends Subject<EventMessage> {
         this._transport = new WebTransport(this.host);
 
         try {
-            this._transportDatagramWriter =
-                this._transport.datagrams.writable.getWriter();
+            this._transportDatagramWriter = this._transport.datagrams.writable.getWriter();
             await this._transport.ready;
             this._connectionStatus$.next(true);
         } catch (e) {
@@ -335,7 +340,7 @@ export default class Presence extends Subject<EventMessage> {
             this.type = 'WebSocket';
             this.host = this.host.replace(/^https/, 'wss');
             this._connectionStatus$.subscribe({
-                next: (isConnected) => {
+                next: isConnected => {
                     if (
                         !this._reconnectionObservable &&
                         typeof isConnected === 'boolean' &&

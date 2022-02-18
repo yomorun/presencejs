@@ -31,7 +31,7 @@ With `presencejs`, components will get data flow in real time. Thus, the UI will
   - Preview: https://cursor-chat-example.vercel.app
   - Source code: https://github.com/yomorun/react-cursor-chat
 - Next.js Commerce with realtime collaboration:
-  - Preview: https://commerce-ochre-sigma-86.vercel.app/
+  - Preview: https://commerce-cursor-chat.vercel.app
   - Source code: https://github.com/osdodo/commerce
 - Solid.js Cursor Chat Component:
   - Preview: https://solid-cursor-chat-example.netlify.app
@@ -129,7 +129,7 @@ const yomo = new Presence('https://prsc.yomo.dev', {
     auth: {
         // Certification Type
         type: 'token',
-        // api for getting access token
+        // Api for getting access token
         endpoint: '/api/presence-auth',
     },
 });
