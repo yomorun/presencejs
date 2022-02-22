@@ -19,6 +19,12 @@ export default class Presence extends Subject<EventMessage> {
     private _socket$: WebSocketSubject<EventMessage> | undefined;
     // Socket Subscription
     private _socketSubscription: Subscription | undefined;
+    // WebTransport Subject instance
+    private _transport$: Subject<EventMessage> | undefined;
+    // WebTransport Subscription
+    private _transportSubscription: Subscription | undefined;
+    // WebTransport datagram writer
+    private _transportDatagramWriter: any;
     // Reconnection stream
     private _reconnectionObservable: Observable<number> | undefined;
     // Reconnection Subscription
@@ -29,12 +35,6 @@ export default class Presence extends Subject<EventMessage> {
     private _reconnectAttempts: number;
     // Subject for connection status stream
     private _connectionStatus$: Subject<boolean>;
-    // WebTransport instance
-    private _transport: any;
-    // WebTransport datagram writer
-    private _transportDatagramWriter: any;
-    // WebTransport Subscription
-    private _wtSubscription: Subscription | undefined;
 
     constructor(host: string, option: PresenceOption) {
         super();
@@ -42,7 +42,6 @@ export default class Presence extends Subject<EventMessage> {
         this.type = 'WebSocket';
         this._reconnectInterval = option?.reconnectInterval || 5000;
         this._reconnectAttempts = option?.reconnectAttempts || 3;
-        this._connectionStatus$ = new Subject<boolean>();
 
         const scheme = getProtocol(host);
 
@@ -61,19 +60,18 @@ export default class Presence extends Subject<EventMessage> {
             }
         }
 
-        if (this.type === 'WebSocket') {
-            this._connectionStatus$.subscribe({
-                next: isConnected => {
-                    if (
-                        !this._reconnectionObservable &&
-                        typeof isConnected === 'boolean' &&
-                        !isConnected
-                    ) {
-                        this._reconnect();
-                    }
-                },
-            });
-        }
+        this._connectionStatus$ = new Subject<boolean>();
+        this._connectionStatus$.subscribe({
+            next: isConnected => {
+                if (
+                    !this._reconnectionObservable &&
+                    typeof isConnected === 'boolean' &&
+                    !isConnected
+                ) {
+                    this._reconnect();
+                }
+            },
+        });
 
         loadWasm().then(() => {
             getAuthorizedURL(this.host, option).then(url => {
@@ -151,8 +149,7 @@ export default class Presence extends Subject<EventMessage> {
         if (this.type === 'WebSocket') {
             this._socket$ && this._socket$.next({ event, data });
         } else {
-            this._transportDatagramWriter &&
-                this._transportDatagramWriter.write(encoder({ event, data }));
+            this._transport$ && this._transport$.next({ event, data });
         }
     }
 
@@ -188,13 +185,12 @@ export default class Presence extends Subject<EventMessage> {
      */
     close() {
         if (this.type === 'WebSocket') {
-            this._reconnectAttempts = 0;
-            this._clearReconnection();
             this._clearSocket();
         } else {
             this._clearTransport();
         }
-
+        this._reconnectAttempts = 0;
+        this._clearReconnection();
         this._connectionStatus$.next(false);
     }
 
@@ -239,52 +235,64 @@ export default class Presence extends Subject<EventMessage> {
     }
 
     /**
-     * Reconnect
+     * Use WebTransport to connect to YoMo's services
      *
      * @private
      */
-    private _reconnect(): void {
-        this._reconnectionObservable = interval(this._reconnectInterval).pipe(
-            takeWhile(
-                (_, index) => index < this._reconnectAttempts && !this._socket$
-            )
-        );
-
-        this._reconnectionSubscription = this._reconnectionObservable.subscribe(
-            {
-                next: () => this._wsConnect(),
-                error: () => undefined,
-                complete: () => {
-                    this._clearReconnection();
-                    if (!this._socket$) {
-                        this.complete();
-                        this._connectionStatus$.complete();
-                    }
-                },
+    private async _wtConnect() {
+        this._transport$ = new Subject<EventMessage>();
+        this._transportSubscription = this._transport$.subscribe(msg => {
+            if (this._transportDatagramWriter) {
+                this._transportDatagramWriter.write(encoder(msg));
             }
-        );
+        });
+
+        // @ts-ignore
+        const transport = new WebTransport(this.host);
+
+        try {
+            this._transportDatagramWriter = transport.datagrams.writable.getWriter();
+            await transport.ready;
+            this._connectionStatus$.next(true);
+        } catch (e) {
+            this._clearTransport();
+            this.type = 'WebSocket';
+            this.host = this.host.replace(/^https/, 'wss');
+            this._wsConnect();
+            return;
+        }
+
+        transport.closed.then(() => {
+            this._connectionStatus$.next(false);
+        });
+
+        this._transportSubscription.add(this._ping());
+        this._transportSubscription.add(this._pong());
+
+        this._readDatagrams(transport);
     }
 
     /**
-     * Clear socket
+     * Read datagrams
      *
      * @private
      */
-    private _clearSocket(): void {
-        this._socket$?.complete();
-        this._socketSubscription && this._socketSubscription.unsubscribe();
-        this._socket$ = undefined;
-    }
-
-    /**
-     * Clear reconnect
-     *
-     * @private
-     */
-    private _clearReconnection(): void {
-        this._reconnectionSubscription &&
-            this._reconnectionSubscription.unsubscribe();
-        this._reconnectionObservable = undefined;
+    private async _readDatagrams(transport: any) {
+        try {
+            const reader = transport.datagrams.readable.getReader();
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) {
+                    return;
+                }
+                this.next(decoder(value));
+            }
+        } catch (e) {
+            this._clearTransport();
+            this._clearReconnection();
+            this._connectionStatus$.next(false);
+            return;
+        }
     }
 
     /**
@@ -323,65 +331,64 @@ export default class Presence extends Subject<EventMessage> {
     }
 
     /**
-     * Use WebTransport to connect to YoMo's services
+     * Reconnect
      *
      * @private
      */
-    private async _wtConnect() {
-        // @ts-ignore
-        this._transport = new WebTransport(this.host);
+    private _reconnect(): void {
+        this._reconnectionObservable = interval(this._reconnectInterval).pipe(
+            takeWhile(
+                (_, index) =>
+                    index < this._reconnectAttempts &&
+                    ((this.type === 'WebSocket' && !this._socket$) ||
+                        (this.type === 'WebTransport' && !this._transport$))
+            )
+        );
 
-        try {
-            this._transportDatagramWriter = this._transport.datagrams.writable.getWriter();
-            await this._transport.ready;
-            this._connectionStatus$.next(true);
-        } catch (e) {
-            this._clearTransport();
-            this.type = 'WebSocket';
-            this.host = this.host.replace(/^https/, 'wss');
-            this._connectionStatus$.subscribe({
-                next: isConnected => {
-                    if (
-                        !this._reconnectionObservable &&
-                        typeof isConnected === 'boolean' &&
-                        !isConnected
-                    ) {
-                        this._reconnect();
+        this._reconnectionSubscription = this._reconnectionObservable.subscribe(
+            {
+                next: () => {
+                    if (this.type === 'WebSocket') {
+                        this._wsConnect();
+                    } else {
+                        this._wtConnect();
                     }
                 },
-            });
-            this._wsConnect();
-            return;
-        }
-
-        this._transport.closed.then(() => {
-            this._connectionStatus$.next(false);
-        });
-
-        this._wtSubscription = this._ping();
-        this._wtSubscription.add(this._pong());
-
-        this._readDatagrams();
+                error: () => undefined,
+                complete: () => {
+                    this._clearReconnection();
+                    if (
+                        (!this._socket$ && this.type === 'WebSocket') ||
+                        (!this._transport$ && this.type === 'WebTransport')
+                    ) {
+                        this.complete();
+                        this._connectionStatus$.complete();
+                    }
+                },
+            }
+        );
     }
 
     /**
-     * Read datagrams
+     * Clear reconnect
      *
      * @private
      */
-    private async _readDatagrams() {
-        try {
-            const reader = this._transport.datagrams.readable.getReader();
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) {
-                    return;
-                }
-                this.next(decoder(value));
-            }
-        } catch (e) {
-            throw e;
-        }
+    private _clearReconnection(): void {
+        this._reconnectionSubscription &&
+            this._reconnectionSubscription.unsubscribe();
+        this._reconnectionObservable = undefined;
+    }
+
+    /**
+     * Clear socket
+     *
+     * @private
+     */
+    private _clearSocket(): void {
+        this._socket$?.complete();
+        this._socketSubscription && this._socketSubscription.unsubscribe();
+        this._socket$ = undefined;
     }
 
     /**
@@ -390,17 +397,12 @@ export default class Presence extends Subject<EventMessage> {
      * @private
      */
     private _clearTransport(): void {
-        if (this._transport) {
-            this._transport = undefined;
-        }
-
-        if (this._transportDatagramWriter) {
-            this._transportDatagramWriter = undefined;
-        }
-
-        if (this._wtSubscription) {
-            this._wtSubscription.unsubscribe();
-            this._wtSubscription = undefined;
+        this._transportDatagramWriter = undefined;
+        if (this._transport$) {
+            this._transport$.complete();
+            this._transportSubscription &&
+                this._transportSubscription.unsubscribe();
+            this._transport$ = undefined;
         }
     }
 }
