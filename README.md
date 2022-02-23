@@ -73,6 +73,8 @@ The client need to authenticate with YoMo to establish a realtime connection. Th
 
 #### How do I get a token?
 
+First, login with your Github account on [presencejs.yomo.run](https://presencejs.yomo.run), get a free `app_id` and `app_secret`.
+
 If you build your application using Next.js, then you can use [API Routes](https://nextjs.org/docs/api-routes/introduction) to get the access token.
 For example, the following API route `pages/api/presence-auth.js` returns a json response with a status code of 200:
 
