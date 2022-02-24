@@ -5,7 +5,8 @@
     </a>
     <a aria-label="License" href="https://github.com/yomorun/presencejs/blob/main/LICENSE">
         <img alt="License" src="https://badgen.net/npm/license/@yomo/presencejs">
-    </a>
+    </a><br/><br/>
+    <a href="https://www.producthunt.com/posts/cursor-chat-anywhere?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-cursor-chat-anywhere" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=333289&theme=dark" alt="Cursor Chat Anywhere - Add Figma like cursor chat to your own products | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
 ## 🧬 Introduction
