@@ -217,6 +217,12 @@ yomo.on('closed', () => {
 
 ## 🤹🏻‍♀️ API
 
+### High-level API
+
+`Context` and `Provider`
+
+### Low-level API
+
 | Methods of instance | Description                                                     | Type                                                |
 | ------------------- | --------------------------------------------------------------- | --------------------------------------------------- |
 | `on`                | Function to handle response for given event from server         | `on<T>(event: string, cb: (data: T) => void): void` |
