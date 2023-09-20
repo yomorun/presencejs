@@ -1,0 +1,53 @@
+{
+  "name": "@yomo/group-hug-react",
+  "version": "1.0.10",
+  "description": "Live collaborator avatars for multiplayer web apps",
+  "keywords": [
+    "webtransport",
+    "websocket",
+    "grouphug",
+    "realtime",
+    "live",
+    "avatar"
+  ],
+  "license": "MIT",
+  "module": "./dist/index.esm.js",
+  "types": "./types.d.ts",
+  "files": [
+    "dist",
+    "./types.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./style.css": "./dist/style.css"
+  },
+  "repository": "github.com:yomorun/presencejs",
+  "bugs": {
+    "url": "https://github.com/yomorun/presencejs/issues?q=is%3Aissue+label%3Agrouphug+"
+  },
+  "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
+  "scripts": {
+    "build:css": "bunx tailwindcss -i ./style.css -o ./out/style.css",
+    "build:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external",
+    "build:docs": "npm run build:css && vite build",
+    "build": "run-p build:js build:css",
+    "watch:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --watch",
+    "watch:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external --watch",
+    "start:vite": "",
+    "start": "",
+    "dist:js": "bun build ./index.tsx --outdir ./dist --target browser --sourcemap=external",
+    "dist:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --minify",
+    "dist": "rm -rf ./dist && bun run dist:js && bun run dist:css"
+  },
+  "devDependencies": {
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@yomo/presence": "workspace:*",
+    "avvvatars-react": "^0.4.2"
+  }
+}

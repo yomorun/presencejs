@@ -1,0 +1,30 @@
+{
+  "name": "presencejs",
+  "version": "next",
+  "description": "Edge infra for Realtime Web Applications with Geo-distributed architecture",
+  "keywords": [
+    "realtime",
+    "presence",
+    "websocket",
+    "webtransport"
+  ],
+  "license": "MIT",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev:server": "cd ./prscd && make dev"
+  },
+  "engines": {
+    "node": ">=10"
+  },
+  "author": "https://yomo.run",
+  "devDependencies": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yomorun/presencejs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yomorun/presencejs/issues"
+  },
+  "homepage": "https://github.com/yomorun/presencejs#readme"
+}

@@ -1,0 +1,52 @@
+name: Build and release prscd
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: Build and release
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    defaults:
+      run:
+        working-directory: prscd
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+          cache-dependency-path: prscd/go.sum
+
+      - name: Run build script
+        env:
+          PRSCD_PLATFORMS: 'darwin/amd64,darwin/arm64,windows/amd64,windows/arm64,linux/amd64,linux/arm64'
+        run: |
+          bash ./build.sh
+
+      - name: Generate hashes
+        run: |
+          cd ./build
+          for f in $(find . -type f); do
+            sha256sum $f | sudo tee -a hashes.txt
+          done
+
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./prscd/build/prscd-amd64-darwin.zip
+            ./prscd/build/prscd-amd64-linux.zip
+            ./prscd/build/prscd-amd64-windows.zip
+            ./prscd/build/prscd-arm64-darwin.zip
+            ./prscd/build/prscd-arm64-linux.zip
+            ./prscd/build/prscd-arm64-windows.zip
+            ./prscd/build/hashes.txt

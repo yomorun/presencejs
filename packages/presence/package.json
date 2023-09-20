@@ -1,0 +1,48 @@
+{
+  "name": "@yomo/presence",
+  "version": "2.2.13",
+  "description": "Edge Infra for Realtime Web Applications, geo-distributed architecture ⚡️",
+  "license": "MIT",
+  "keywords": [
+    "webtransport",
+    "websocket",
+    "presence",
+    "live",
+    "realtime"
+  ],
+  "module": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": "github.com:yomorun/presencejs",
+  "bugs": {
+    "url": "https://github.com/yomorun/presencejs/issues"
+  },
+  "homepage": "https://presence.js.org",
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^12.1.2",
+    "bun-types": "^1.0.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^2.8.0",
+    "@yomo/webtransport-polyfill": "^1.0.10"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./out --target browser --sourcemap=external",
+    "start": "bun build ./src/index.ts --outdir ./out --target browser --watch",
+    "test": "bun test",
+    "cypress:open": "cypress open",
+    "lint": "",
+    "dist": "bun build ./src/index.ts --outdir ./dist --target browser --sourcemap=external && cp src/types.d.ts dist/types.d.ts"
+  }
+}

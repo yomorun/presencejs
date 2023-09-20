@@ -1,0 +1,89 @@
+{
+  "props": [
+    {
+      "name": "presence",
+      "type": "Promise<IPresence>",
+      "description": "An instance of the Presence"
+    },
+    {
+      "name": "id",
+      "type": "string",
+      "description": "The unique identifier of the user"
+    },
+    {
+      "name": "avatar",
+      "type": "string",
+      "description": "The URL or path of the user's avatar image"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "description": "The name or display name of the user"
+    },
+    {
+      "name": "MPOP",
+      "type": "boolean",
+      "description": "A boolean value indicating whether the MPOP (Multiple Points of Presence) feature is enabled for the user"
+    },
+    {
+      "name": "darkMode",
+      "type": "boolean",
+      "description": "A boolean value indicating whether the dark mode is enabled for the user"
+    },
+    {
+      "name": "avatarTextColor",
+      "type": "string",
+      "description": "The color of the text displayed on the user's avatar"
+    },
+    {
+      "name": "avatarBackgroundColor",
+      "type": "string",
+      "description": "The background color of the user's avatar"
+    },
+    {
+      "name": "avatarBorderColor",
+      "type": "string",
+      "description": "The border color of the user's avatar"
+    },
+    {
+      "name": "avatarBorderWidth",
+      "type": "number",
+      "description": "The width of the border around the user's avatar"
+    },
+    {
+      "name": "size",
+      "type": "number",
+      "description": "The size of the avatar in pixels"
+    },
+    {
+      "name": "overlapping",
+      "type": "boolean",
+      "description": "A boolean value indicating whether the avatars should overlap when multiple users are present"
+    },
+    {
+      "name": "transparency",
+      "type": "number",
+      "description": "The transparency level of the avatars, ranging from 0 (fully transparent) to 1 (fully opaque)"
+    },
+    {
+      "name": "maximum",
+      "type": "number",
+      "description": "The maximum number of avatars to display in the group"
+    },
+    {
+      "name": "popover",
+      "type": "((id: string, name: string) => React.ReactNode) | undefined | null",
+      "description": "A function that returns a React node to render in the popover when the user's avatar is hovered"
+    },
+    {
+      "name": "onMouseEnter",
+      "type": "(user: User) => void",
+      "description": "A callback function triggered when the mouse pointer enters the user's avatar"
+    },
+    {
+      "name": "onMouseLeave",
+      "type": "(user: User) => void",
+      "description": "A callback function triggered when the mouse pointer leaves the user's avatar"
+    }
+  ]
+}

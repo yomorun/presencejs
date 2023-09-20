@@ -1,0 +1,32 @@
+{
+  "name": "@yomo/cursor-chat-react",
+  "version": "1.0.1",
+  "module": "./dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "./types.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "import": "./dist/index.esm.mjs"
+    },
+    "./package.json": "./package.json",
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "build:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --minify",
+    "build:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external",
+    "watch:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --watch",
+    "watch:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external --watch",
+    "start": "",
+    "dist": "bun build ./index.tsx --outdir ./dist --target browser --sourcemap=external && cp ./types.d.ts dist/types.d.ts"
+  },
+  "devDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependencies": {
+    "@yomo/presence": "workspace:*"
+  }
+}
