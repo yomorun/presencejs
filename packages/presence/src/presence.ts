@@ -1,4 +1,4 @@
-import WebTransport from '@yomo/webtransport-polyfill';
+import { WebTransportPolyfill } from '@yomo/webtransport-polyfill';
 import { Channel } from './channel';
 import { Logger } from './logger';
 import {
@@ -17,7 +17,8 @@ export class Presence implements IPresence {
   #url: string = '';
   #state: State;
   #channels: Map<string, IChannel> = new Map();
-  #transport: any;
+  // conn is the connection, which is a WebTransport instance
+  #conn: any;
   #options: InternalPresenceOptions;
   #logger: Logger;
   #eventListeners: Map<ConnectionStatus, ConnectionStatusCallback[]> = new Map();
@@ -26,6 +27,7 @@ export class Presence implements IPresence {
   #onClosedCallbackFn: Function = () => { };
   #currentStatus: ConnectionStatus = ConnectionStatus.CLOSED;
   #retryCount = 0;
+  #retryInterval = 10e3;
 
   get status(): ConnectionStatus {
     return this.#currentStatus;
@@ -44,11 +46,92 @@ export class Presence implements IPresence {
     // check url
     this.#url = this.#formatUrl(url);
 
-    (async () => {
-      // this.#url = await this.#formatUrl(url);
-      this.#notifyConnectionStatusChange(ConnectionStatus.CONNECTING, 'Attempting to establish a connection.');
-      this.#connect();
-    })();
+    // (async () => {
+    this.#notifyConnectionStatusChange(ConnectionStatus.CONNECTING, 'Attempting to establish a connection.');
+    this.#connect();
+    // })();
+  }
+
+  // #reconnect() will executes:
+  // 1. try window.WebTransport()
+  // 2. if failed, try window.WebTransportPolyfill() if options.autoDowngrade is true
+  // 3. if failed, reconnect after 2 seconds
+  #connect() {
+    const conn = new window.WebTransport(this.#url);
+
+    this.#conn = conn;
+
+    conn.ready
+      .then(() => {
+        this.#logger.log('wt.ready.then', 'connected');
+        // this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
+        // this.#onReadyCallbackFn();
+      })
+      .catch((e: Error) => {
+        this.#logger.log('wt.ready.catch', e);
+      });
+
+    conn.closed
+      .then((p) => {
+        this.#logger.log('wt.closed.then', p);
+        this.#onClosedCallbackFn();
+        this.#channels.forEach((channel) => {
+          this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
+          channel.leave();
+        });
+      })
+      .catch((e: Error) => {
+        // if server close the connection, this event will be triggered
+        this.#logger.log('wt.closed.catch', e);
+
+        // WebTransport 连接不上，这里会有错误，但在 closed 事件中之后
+        // this.#logger.log(`.ready catch [${this.#retryCount}]`, { e });
+        // 第一次用 WebTransport 连接的错误在这里捕获
+        if (e.name === 'WebTransportError') {
+          if (e.message === 'Opening handshake failed.') {
+            // udp is disabled to the server
+            this.#logger.log('S1>', 'WebTransport is not supported by the server, downgrade to websocket');
+          } else {
+            this.#logger.log('connect.wt', e.message);
+          }
+        } else {
+          this.#logger.log('connect.wt', { e });
+        }
+
+        // 是否降级到 WebSocket
+        if (this.#options.autoDowngrade) {
+          this.#logger.log('S2>', 'downgrade to websocket');
+          this.#conn = new WebTransportPolyfill(this.#url);
+          this.#retryCount++;
+          this.#conn.ready
+            .then((p) => {
+              this.#logger.log('ws.ready.then', p)
+            })
+            .catch((pp: Error) => {
+              this.#logger.log('ws.ready.catch', pp)
+            });
+          this.#conn.closed
+            .then(() => {
+              this.#logger.log('ws.closed.then', 'closed')
+            })
+            .catch((pp: Error) => {
+              this.#logger.log('ws.closed.catch', pp)
+              this.#logger.log('START Reconnect.......', this.#retryInterval);
+              setTimeout(() => {
+                this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
+                this.#connect();
+              }, this.#retryInterval);
+            });
+        } else {
+          this.#logger.log('connect.downgrade', 'not to websocket');
+          this.#retryCount++;
+          this.#logger.log('[ws] START Reconnect.......', this.#retryInterval);
+          setTimeout(() => {
+            this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
+            this.#connect();
+          }, this.#retryInterval);
+        }
+      });
   }
 
   #formatUrl(url: string) {
@@ -83,7 +166,7 @@ export class Presence implements IPresence {
         ...this.#state,
         ...(state || {}),
       };
-      const channel = new Channel(channelId, this.#state, this.#transport, {
+      const channel = new Channel(channelId, this.#state, this.#conn, {
         reliable: this.#options.reliable,
         debug: this.#options.debug || false,
       });
@@ -123,45 +206,6 @@ export class Presence implements IPresence {
     if (callbacks) {
       callbacks.forEach((callback) => callback(statusObject));
     }
-  }
-
-  #connect() {
-    this.#transport = new window.WebTransport(this.#url);
-
-    this.#transport.ready
-      .then(() => {
-        this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
-        this.#onReadyCallbackFn();
-      })
-      .catch((e: Error) => {
-        this.#onErrorCallbackFn(e);
-      });
-
-    this.#transport.closed
-      .then(() => {
-        this.#onClosedCallbackFn();
-        this.#channels.forEach((channel) => {
-          this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
-          channel.leave();
-        });
-      })
-      .catch((e: Error) => {
-        this.#logger.log('error: ', e);
-        if (!this.#options.autoDowngrade) {
-          return;
-        }
-        setTimeout(() => {
-          if (this.#retryCount > 3) {
-            this.#logger.log('retry count exceeded');
-            this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
-            return;
-          }
-          // force to use the polyfill
-          window.WebTransport = WebTransport;
-          this.#connect();
-          this.#retryCount++;
-        }, 2_000);
-      });
   }
 }
 
