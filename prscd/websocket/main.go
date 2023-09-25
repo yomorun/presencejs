@@ -186,7 +186,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 						// detect connection has been closed
 						log.Info("read error: [%v] %v", et, err)
 						// send Close frame to client
-						conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusGoingAway, "bye"))))
+						conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusNormalClosure, "bye-default"))))
 					}
 					// clear connection
 					peer.Disconnect()
