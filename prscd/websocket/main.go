@@ -202,6 +202,8 @@ func ListenAndServe(addr string, config *tls.Config) {
 						log.Info("[%s] >GOT CLOSE", peer.Sid)
 						peer.Disconnect()
 						wsutil.ControlFrameHandler(conn, ws.StateServerSide)
+						conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusNormalClosure, "bye"))))
+						conn.Close()
 						return
 					}
 
@@ -221,6 +223,9 @@ func ListenAndServe(addr string, config *tls.Config) {
 				// only accept Binary mode message, will break if receive Text mode message
 				if header.OpCode == ws.OpText {
 					log.Error("Peer: %s sent text which not allowed", peer.Sid)
+					// https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1 1003
+					conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusUnsupportedData, "no text allowed"))))
+					conn.Close()
 					break
 				}
 
