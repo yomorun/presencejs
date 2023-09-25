@@ -1,6 +1,6 @@
 {
   "name": "@yomo/presence",
-  "version": "2.2.13",
+  "version": "2.2.15",
   "description": "Edge Infra for Realtime Web Applications, geo-distributed architecture ⚡️",
   "license": "MIT",
   "keywords": [
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "^2.8.0",
-    "@yomo/webtransport-polyfill": "link:@yomo/webtransport-polyfill"
+    "@yomo/webtransport-polyfill": "^1.0.16"
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./out --target browser --sourcemap=external",
