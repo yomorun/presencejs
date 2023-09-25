@@ -41,6 +41,8 @@ export type EitherOr<O extends Object, L extends string, R extends string> = (
 
 export type GroupHugProps = {
   presence: Promise<IPresence>;
+  // channel id
+  channel: string;
   id: string;
   avatar?: string;
   name: string;

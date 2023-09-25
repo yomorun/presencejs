@@ -1,4 +1,4 @@
-import { decode, encode as msgPackEncode } from '@msgpack/msgpack';
+import { decode, encode } from '@msgpack/msgpack';
 import { JsonSerializer } from './JsonSerializer';
 import { Logger } from './logger';
 import { Peers } from './peers';
@@ -11,7 +11,7 @@ import {
   State,
 } from './types';
 
-const signalingEncode = (data: Signaling) => msgPackEncode(data);
+const signalingEncode = (data: Signaling) => encode(data);
 
 export class Channel implements IChannel {
   #transport: any;
@@ -109,7 +109,7 @@ export class Channel implements IChannel {
       t: 'control',
       op: 'channel_join',
       c: this.id,
-      pl: msgPackEncode(this.#state),
+      pl: encode(this.#state),
     });
   }
 
@@ -117,7 +117,7 @@ export class Channel implements IChannel {
     this.#write({
       t: 'data',
       c: this.id,
-      pl: msgPackEncode({
+      pl: encode({
         event, data,
       }),
     });
@@ -175,7 +175,7 @@ export class Channel implements IChannel {
           }
 
           if (signaling.op === 'peer_state') {
-            // console.log('*************peer_state: ', signaling);
+            console.log('*************peer_state: ', signaling);
             this.#handleSync({
               id: signaling.p,
               ...(decode(signaling.pl!) as any),
@@ -183,7 +183,7 @@ export class Channel implements IChannel {
             continue;
           }
         } else if (signaling.t === 'data') {
-          this.#logger.log('>sig[data]', `p: ${signaling.p}, pl: ${signaling.pl}`);
+          this.#logger.log('>sig[data]', `p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
           let { event, data } = decode(signaling.pl!) as any;
           data = JsonSerializer.deserialize(data);
           if (this.#subscribers.has(event)) {
@@ -197,6 +197,7 @@ export class Channel implements IChannel {
     }
   }
 
+  // signal: peer_online
   #handleOnline(id: string) {
     if (id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => member.id === id);
@@ -205,8 +206,9 @@ export class Channel implements IChannel {
       } else {
         this.#members.push({ id });
       }
+      // when receive `peer_online`, should broadcast `peer_state` to this channel
       this.#syncState();
-      this.#peers?.trigger(this.#members);
+      // this.#peers?.trigger(this.#members);
     }
   }
 
@@ -215,8 +217,8 @@ export class Channel implements IChannel {
       const idx = this.#members.findIndex((member) => {
         return String(member.id) === String(payload.id);
       });
-
       if (idx > -1) {
+        console.log("----------------->>>>>>", payload)
         this.#members[idx] = payload;
       } else {
         this.#members.push(payload);
@@ -225,22 +227,24 @@ export class Channel implements IChannel {
     }
   }
 
+  // [send] signal: peer_online
   #online() {
     this.#write({
       t: 'control',
       op: 'peer_online',
       c: this.id,
-      p: this.#state.id,
+      // p: this.#state.id,
     })
   }
 
+  // [send] signal: peer_state
   #syncState() {
     this.#write({
       t: 'control',
       op: 'peer_state',
       c: this.id,
-      p: this.#state.id,
-      pl: msgPackEncode(this.#state),
+      // p: this.#state.id,
+      pl: encode(this.#state),
     })
   }
 
