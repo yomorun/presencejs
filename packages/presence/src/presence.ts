@@ -64,51 +64,62 @@ export class Presence implements IPresence {
     conn.ready
       .then(() => {
         this.#logger.log('wt.ready.then', 'connected');
-        // this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
-        // this.#onReadyCallbackFn();
+        // window.p = this.#conn;
+        this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
+        this.#onReadyCallbackFn();
       })
       .catch((e: Error) => {
-        this.#logger.log('wt.ready.catch', e);
+        this.#logger.log('**wt.ready.catch', e);
       });
 
     conn.closed
       .then((p) => {
+        // user call close() method
         this.#logger.log('wt.closed.then', p);
-        this.#onClosedCallbackFn();
+        if (this.#onClosedCallbackFn) {
+          this.#logger.log('\twt.closed.then', this.#onClosedCallbackFn);
+          this.#onClosedCallbackFn();
+        }
         this.#channels.forEach((channel) => {
           this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
           channel.leave();
         });
       })
       .catch((e: Error) => {
-        // if server close the connection, this event will be triggered
-        this.#logger.log('wt.closed.catch', e);
-
-        // WebTransport 连接不上，这里会有错误，但在 closed 事件中之后
-        // this.#logger.log(`.ready catch [${this.#retryCount}]`, { e });
-        // 第一次用 WebTransport 连接的错误在这里捕获
+        this.#logger.log('>>>wt.closed.catch', `name=${e.name}, message=${e.message}`);
         if (e.name === 'WebTransportError') {
           if (e.message === 'Opening handshake failed.') {
             // udp is disabled to the server
             this.#logger.log('S1>', 'WebTransport is not supported by the server, downgrade to websocket');
-          } else {
-            this.#logger.log('connect.wt', e.message);
+          } else if (e.message === 'remote WebTransport close' || e.message === 'Connection lost.') {
+            this.#logger.log('S1>', `WebTransport server rejected, do NOT downgrade to websocket: ${e.message}`);
+            this.#logger.log('START Reconnect.......', this.#retryInterval);
+            return setTimeout(() => {
+              this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
+              this.#connect();
+            }, this.#retryInterval);
           }
+        } else if (e.message === 'WebTransport connection rejected') {
+          // firefox will emit this error when proxy not support webtransport.
+          // so we have to downgrade to websocket
         } else {
           this.#logger.log('connect.wt', { e });
         }
-
         // 是否降级到 WebSocket
         if (this.#options.autoDowngrade) {
           this.#logger.log('S2>', 'downgrade to websocket');
           this.#conn = new WebTransportPolyfill(this.#url);
           this.#retryCount++;
           this.#conn.ready
-            .then((p) => {
-              this.#logger.log('ws.ready.then', p)
+            .then(() => {
+              this.#logger.log('ws.ready.then', 'connected')
+              this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
+              // window.p = this.#conn;
+              this.#onReadyCallbackFn();
             })
             .catch((pp: Error) => {
               this.#logger.log('ws.ready.catch', pp)
+              this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
             });
           this.#conn.closed
             .then(() => {
@@ -157,6 +168,7 @@ export class Presence implements IPresence {
   }
 
   onClosed(callbackFn: Function) {
+    this.#logger.log('$Register onClosed', callbackFn);
     this.#onClosedCallbackFn = callbackFn;
   }
 
@@ -246,9 +258,9 @@ export function createPresence(url: string, options: PresenceOptions) {
     presence.onReady(() => {
       resolve(presence);
     });
-    presence.onClosed(() => {
-      reject('closed');
-    });
+    // presence.onClosed(() => {
+    //   reject('closed');
+    // });
     presence.onError((e: any) => {
       reject(e);
     });

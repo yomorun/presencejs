@@ -39,7 +39,7 @@ export class Channel implements IChannel {
     this.#transport = transport;
     this.#logger = new Logger({
       enabled: options.debug,
-      module: 'Presence Channel',
+      module: 'presence.Channel:' + this.id,
     });
     this.#joinTimestamp = Date.now();
     this.#joinTimestamp;
@@ -90,13 +90,11 @@ export class Channel implements IChannel {
   }
 
   leave() {
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_offline',
-        c: this.id,
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_offline',
+      c: this.id,
+    });
     // this.#transport.close();
   }
 
@@ -107,29 +105,28 @@ export class Channel implements IChannel {
   }
 
   #joinChannel() {
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'channel_join',
-        c: this.id,
-        pl: msgPackEncode(this.#state),
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'channel_join',
+      c: this.id,
+      pl: msgPackEncode(this.#state),
+    });
   }
 
   #broadcast<T>(event: string, data: T) {
-    this.#write(
-      signalingEncode({
-        t: 'data',
-        c: this.id,
-        pl: msgPackEncode({
-          event, data,
-        }),
-      })
-    );
+    this.#write({
+      t: 'data',
+      c: this.id,
+      pl: msgPackEncode({
+        event, data,
+      }),
+    });
   }
 
-  async #write(data: Uint8Array) {
+  // #write(data: Uint8Array) {
+  #write(sig: Signaling) {
+    this.#logger.log('write sig: ', sig);
+    const data = signalingEncode(sig);
     if (!this.#writer) {
       if (this.#transport.datagrams.writable.locked) {
         try {
@@ -140,17 +137,11 @@ export class Channel implements IChannel {
       }
       if (this.#reliable) {
         this.#writer = this.#transport.createSendStream().getWriter();
+      } else {
+        this.#writer = this.#transport.datagrams.writable.getWriter();
       }
-      this.#writer = this.#transport.datagrams.writable.getWriter();
     }
-    // check connection state
-    // FIXME: infinite wait
-    // if (await this.#transport.closed) {
-    //   throw new Error('Connection is disconnected');
-    // }
-    await this.#writer.ready;
     this.#writer.write(data);
-    // writer.close();
   }
 
   async #read() {
@@ -166,13 +157,7 @@ export class Channel implements IChannel {
         const data = new Uint8Array(value);
         const signaling: Signaling = decode(data) as Signaling;
         if (signaling.t === 'control') {
-          this.#logger.log(
-            'control ',
-            `op: ${signaling.op}\n`,
-            `p: ${signaling.p}\n`,
-            'pl: ',
-            signaling.pl
-          );
+          this.#logger.log('>sig[control]', `op: ${signaling.op}, p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
           if (signaling.op === 'channel_join') {
             this.#online();
             this.#syncState();
@@ -198,6 +183,7 @@ export class Channel implements IChannel {
             continue;
           }
         } else if (signaling.t === 'data') {
+          this.#logger.log('>sig[data]', `p: ${signaling.p}, pl: ${signaling.pl}`);
           let { event, data } = decode(signaling.pl!) as any;
           data = JsonSerializer.deserialize(data);
           if (this.#subscribers.has(event)) {
@@ -240,28 +226,22 @@ export class Channel implements IChannel {
   }
 
   #online() {
-    this.#logger.log(`online cid: ${this.id} state: `, this.#state);
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_online',
-        c: this.id,
-        p: this.#state.id,
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_online',
+      c: this.id,
+      p: this.#state.id,
+    })
   }
 
   #syncState() {
-    this.#logger.log('sync state: ', this.#state);
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_state',
-        c: this.id,
-        p: this.#state.id,
-        pl: msgPackEncode(this.#state),
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_state',
+      c: this.id,
+      p: this.#state.id,
+      pl: msgPackEncode(this.#state),
+    })
   }
 
   #offline(id: string) {
