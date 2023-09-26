@@ -1,6 +1,6 @@
 import { createPresence } from '@yomo/presence';
 import ReactDOM from "react-dom/client";
-import GroupHug from './index.tsx';
+import GroupHug from './index.js';
 
 // create an instance.
 const id = "gh-" + (new Date).valueOf().toString()

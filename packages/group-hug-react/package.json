@@ -1,6 +1,6 @@
 {
   "name": "@yomo/group-hug-react",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Live collaborator avatars for multiplayer web apps",
   "keywords": [
     "webtransport",
@@ -31,15 +31,12 @@
   },
   "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
   "scripts": {
+    "dev": "bun x vite -d",
     "build:css": "tailwindcss -i ./style.css -o ./out/style.css",
     "build:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external",
     "build": "bun run build:js && bun run build:css",
-    "watch:css": "tailwindcss -i ./style.css -o ./dist/style.css --watch",
-    "watch:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external --watch",
-    "start:vite": "",
-    "start": "",
     "dist:js": "bun build ./index.tsx --outdir ./dist --target browser --sourcemap=external",
-    "dist:css": "tailwindcss -i ./style.css -o ./dist/style.css --minify",
+    "dist:css": "bun x tailwindcss -i ./style.css -o ./dist/style.css --minify",
     "dist": "rm -rf ./dist && bun run dist:js && bun run dist:css"
   },
   "devDependencies": {
@@ -50,7 +47,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@yomo/presence": "workspace:../presence",
+    "@yomo/presence": "^2.2.17",
     "avvvatars-react": "^0.4.2"
   }
 }

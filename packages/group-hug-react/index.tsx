@@ -1,11 +1,12 @@
+/// <reference lib="dom" />
+
 import { IChannel } from '@yomo/presence';
 import Avvvatars from 'avvvatars-react';
 import React, {
   createContext,
-  memo,
   useContext,
   useEffect,
-  useState,
+  useState
 } from 'react';
 import { GroupHugProps, User } from './types.d';
 
@@ -37,7 +38,10 @@ const GroupHugCtx = createContext<{
   onMouseLeave: (user: User) => void;
 } | null>(null);
 
-const GroupHug = memo(
+const idx = Math.floor(Math.random() * colors.length);
+
+
+const GroupHug = /*memo(*/
   ({
     presence,
     channel,
@@ -45,11 +49,11 @@ const GroupHug = memo(
     avatar = '',
     darkMode = false,
     avatarTextColor = '#000',
-    avatarBorderColor = '',
+    avatarBorderColor = colors[idx],
     avatarBorderWidth = 2,
-    avatarBackgroundColor = '',
+    avatarBackgroundColor = colors[idx],
     name,
-    size = 24,
+    size = 36,
     overlapping = true,
     transparency = 0.5,
     maximum = 5,
@@ -84,14 +88,6 @@ const GroupHug = memo(
       transparency = Math.max(0, Math.min(1, transparency));
     }
 
-    if (!avatarBorderColor) {
-      let idx = Math.floor(Math.random() * colors.length);
-      avatarBorderColor = colors[idx];
-    }
-    if (!avatarBackgroundColor) {
-      avatarBackgroundColor = avatarBorderColor;
-    }
-
     const [myState, setMyState] = useState<User>({
       id,
       avatar,
@@ -104,6 +100,13 @@ const GroupHug = memo(
     const [peers, setPeers] = useState<User[]>([]);
     const [connected, setConnected] = useState(false);
     const [ch, setChannel] = useState<IChannel | null>(null);
+
+    // if (!avatarBorderColor) {
+    //   avatarBorderColor = colors[idx];
+    // }
+    // if (!avatarBackgroundColor) {
+    //   avatarBackgroundColor = avatarBorderColor;
+    // }
 
     // when page load, join the channel
     useEffect(() => {
@@ -201,6 +204,7 @@ const GroupHug = memo(
 
     // when my state changes, broadcast to other peers
     useEffect(() => {
+      console.log(`$$$ Register [my-state-change] event listener on ch:`, ch?.id)
       if (!ch) return;
 
       const state = document.hidden ? 'away' : 'online';
@@ -221,19 +225,19 @@ const GroupHug = memo(
       //   }
       //   return peers;
       // });
-      console.log('.........useEffect.xxx', newState)
+      console.log('.........broadcast.my.new.state.xxx', newState)
       // ch.broadcast('change-state', newState);
-    }, [myState
-      // ch, 
-      // name,
-      // avatar,
-      // avatarTextColor,
-      // avatarBorderColor,
-      // avatarBackgroundColor,
+    }, [
+      name,
+      avatar,
+      avatarTextColor,
+      avatarBorderColor,
+      avatarBackgroundColor,
     ]);
 
     // observe page visibility change
     useEffect(() => {
+      console.log(`$$$ Register [visibilitychange] event listener on ch:`, ch?.id)
       if (!ch) return;
 
       const visibilitychangeCb = () => {
@@ -303,7 +307,7 @@ const GroupHug = memo(
       </GroupHugCtx.Provider>
     );
   }
-);
+/*);*/
 
 export default GroupHug;
 
@@ -346,8 +350,8 @@ function TextAvatar({ user }) {
           width: `${size}px`,
           height: `${size}px`,
           lineHeight: `${size}px`,
-          background: `${user.avatarBackgroundColor}`,
-          border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
+          // background: `${user.avatarBackgroundColor}`,
+          // border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
           fontSize: '14px',
           color: user.avatarTextColor,
         }}
