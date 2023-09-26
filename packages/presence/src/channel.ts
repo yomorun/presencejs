@@ -159,24 +159,26 @@ export class Channel implements IChannel {
         if (signaling.t === 'control') {
           this.#logger.log('>sig[control]', `op: ${signaling.op}, p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
           if (signaling.op === 'channel_join') {
+            // when receive `channel_join`, means join success, should broadcast `peer_state` to this channel
+            // to notify other peers that I'm online
             this.#online();
             this.#syncState();
             this.#joinCallbackFns.forEach((fn) => fn());
             continue;
           }
           if (signaling.op === 'peer_online') {
-            // console.log('*************peer_online: ', signaling);
-            this.#handleOnline(signaling.p!);
+            // someone is online
+            this.#handlePeerOnline(signaling.p!);
             continue;
           }
           if (signaling.op === 'peer_offline') {
-            this.#offline(signaling.p!);
+            // someone is offline
+            this.#handlePeerOffline(signaling.p!);
             continue;
           }
-
           if (signaling.op === 'peer_state') {
-            console.log('*************peer_state: ', signaling);
-            this.#handleSync({
+            // someone's state is changed
+            this.#handlePeerState({
               id: signaling.p,
               ...(decode(signaling.pl!) as any),
             });
@@ -184,7 +186,9 @@ export class Channel implements IChannel {
           }
         } else if (signaling.t === 'data') {
           this.#logger.log('>sig[data]', `p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
+          // the payload of signaling is encoded by msgpack
           let { event, data } = decode(signaling.pl!) as any;
+          // the data of the payload is encoded by JSON
           data = JsonSerializer.deserialize(data);
           if (this.#subscribers.has(event)) {
             this.#subscribers.get(event)!(data, { id: signaling.p! });
@@ -197,8 +201,8 @@ export class Channel implements IChannel {
     }
   }
 
-  // signal: peer_online
-  #handleOnline(id: string) {
+  // [receive] signal: peer_online
+  #handlePeerOnline(id: string) {
     if (id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => member.id === id);
       if (idx > -1) {
@@ -212,16 +216,16 @@ export class Channel implements IChannel {
     }
   }
 
-  #handleSync(payload: any) {
-    if (payload.id !== this.#state.id) {
+  // [receive] signal: peer_state
+  #handlePeerState(peer: State) {
+    if (peer.id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => {
-        return String(member.id) === String(payload.id);
+        return String(member.id) === String(peer.id);
       });
       if (idx > -1) {
-        console.log("----------------->>>>>>", payload)
-        this.#members[idx] = payload;
+        this.#members[idx] = peer;
       } else {
-        this.#members.push(payload);
+        this.#members.push(peer);
       }
       this.#peers?.trigger(this.#members);
     }
@@ -248,7 +252,8 @@ export class Channel implements IChannel {
     })
   }
 
-  #offline(id: string) {
+  // [receive] signal: peer_offline
+  #handlePeerOffline(id: string) {
     this.#logger.log(`offline id: ${id}`);
     if (id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => {
