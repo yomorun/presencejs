@@ -17,8 +17,7 @@
     "node": ">=10"
   },
   "author": "https://yomo.run",
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yomorun/presencejs.git"
@@ -26,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/yomorun/presencejs/issues"
   },
-  "homepage": "https://github.com/yomorun/presencejs#readme"
+  "homepage": "https://github.com/yomorun/presencejs#readme",
+  "dependencies": {
+    "@yomo/webtransport-polyfill": "^1.0.18"
+  }
 }

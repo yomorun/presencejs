@@ -244,10 +244,6 @@ const defaultOptions: InternalPresenceOptions = {
  * @param {boolean} options.autoDowngrade - whether to auto downgrade to unreliable transport, when the reliable transport is not available
  * @returns {Promise<IPresence>}
  */
-export function createPresence(
-  url: string,
-  options: PresenceOptions
-): Promise<IPresence>;
 export function createPresence(url: string, options: PresenceOptions) {
   return new Promise((resolve, reject) => {
     const internalOptions: InternalPresenceOptions = {

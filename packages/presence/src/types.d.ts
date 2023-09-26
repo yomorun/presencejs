@@ -122,3 +122,8 @@ export interface Signaling {
   c: string;
   pl?: ArrayBuffer;
 }
+
+export function createPresence(
+  url: string,
+  options: PresenceOptions
+): Promise<IPresence>;

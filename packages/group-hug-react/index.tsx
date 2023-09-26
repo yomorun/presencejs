@@ -101,30 +101,12 @@ const GroupHug = /*memo(*/
     const [connected, setConnected] = useState(false);
     const [ch, setChannel] = useState<IChannel | null>(null);
 
-    // if (!avatarBorderColor) {
-    //   avatarBorderColor = colors[idx];
-    // }
-    // if (!avatarBackgroundColor) {
-    //   avatarBackgroundColor = avatarBorderColor;
-    // }
-
     // when page load, join the channel
     useEffect(() => {
-      // (async () => {
-      //   try {
-      //     const yomo = await presence;
-      //     const ch = await yomo.joinChannel('group-hug', myState);
-      //     console.log('--------------------yomo.joinChannel', new Date())
-      //     setConnected(true);
-      //     setChannel(ch);
-      //   } catch (e) {
-      //     console.log(e);
-      //   }
-      // })();
       const joinChannel = async () => {
         try {
           const yomo = await presence;
-          const ch = await yomo.joinChannel('group-hug', myState);
+          const ch = await yomo.joinChannel(channel, myState);
           console.log('--------------------yomo.joinChannel', new Date())
           setConnected(true);
           setChannel(ch);
@@ -162,9 +144,6 @@ const GroupHug = /*memo(*/
             peers.push(p);
           }
         });
-        // setPeers([
-        //   ...(peers as User[]).filter(peer => 'avatar' in peer),
-        // ]);
         setPeers(peers)
       });
 
@@ -179,21 +158,18 @@ const GroupHug = /*memo(*/
         console.log(`\tch is null`)
         return;
       }
-      const unsubscribe = ch.subscribe(
+      const unsubscribe = ch.subscribe<User>(
         'change-state',
-        (data) => {
-          console.log("\t.on('change-state')", data)
+        (p: User) => {
+          console.log("\t.on('change-state')", p)
           // find user
-          const user = peers.find(user => user.id === data.id);
-          if (user) {
-            setPeers(
-              peers.map(user => {
-                if (user.id === data.id) {
-                  return data;
-                }
-                return user;
-              })
-            );
+          const userIndex = peers.findIndex(user => user.id === p.id);
+          if (userIndex !== -1) {
+            setPeers(prevPeers => [
+              ...prevPeers.slice(0, userIndex),
+              p,
+              ...prevPeers.slice(userIndex + 1)
+            ]);
           }
         }
       );
@@ -218,21 +194,11 @@ const GroupHug = /*memo(*/
         avatarBackgroundColor,
       };
       setMyState(newState);
-      // setPeers(peers => {
-      //   const idx = peers.findIndex(user => user.id === id);
-      //   if (idx > -1) {
-      //     peers[idx] = newState;
-      //   }
-      //   return peers;
-      // });
-      console.log('.........broadcast.my.new.state.xxx', newState)
+      console.log('.........should broadcast.my.new.state.xxx', newState)
       // ch.broadcast('change-state', newState);
     }, [
       name,
       avatar,
-      avatarTextColor,
-      avatarBorderColor,
-      avatarBackgroundColor,
     ]);
 
     // observe page visibility change
@@ -242,12 +208,8 @@ const GroupHug = /*memo(*/
 
       const visibilitychangeCb = () => {
         const state = document.hidden ? 'away' : 'online';
-        const newState: User = {
-          ...myState,
-          state,
-        };
-        setMyState(newState);
-        console.log('.........visibilitychangeCb', new Date())
+        setMyState(prevState => ({ ...prevState, state }));
+        console.log('.........should.broadcast.visibilitychangeCb', new Date())
         // ch.broadcast('change-state', newState);
       };
       document.addEventListener('visibilitychange', visibilitychangeCb);
@@ -255,7 +217,7 @@ const GroupHug = /*memo(*/
       return () => {
         document.removeEventListener('visibilitychange', visibilitychangeCb);
       };
-    }, []);
+    }, [ch]);
 
     if (!connected) {
       return <div></div>;
