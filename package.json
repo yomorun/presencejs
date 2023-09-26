@@ -11,7 +11,7 @@
   "license": "MIT",
   "workspaces": ["packages/presence", "packages/group-hug-react", "packages/grouphug-builder"],
   "scripts": {
-    "dev:server": "cd ./prscd && make dev"
+    "prscd:dev": "cd ./prscd && make dev"
   },
   "engines": {
     "node": ">=10"
