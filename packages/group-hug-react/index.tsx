@@ -25,7 +25,7 @@ const GroupHugCtx = createContext<{
   size: number;
   darkMode: boolean;
   avatarTextColor: string;
-  avatarBorderWidth: number;
+  /* avatarBorderWidth: number; */
   avatarBackgroundColor: string;
   overlapping: boolean;
   transparency: number;
@@ -45,7 +45,7 @@ const GroupHug = memo(
     darkMode = false,
     avatarTextColor = '#000',
     avatarBorderColor = '',
-    avatarBorderWidth = 2,
+    /* avatarBorderWidth = 2, */
     avatarBackgroundColor = '',
     name,
     size = 24,
@@ -63,12 +63,12 @@ const GroupHug = memo(
       console.warn('GroupHug: size must be greater than 8');
       size = 8;
     }
-    if (avatarBorderWidth < 0) {
-      console.warn(
-        'GroupHug: avatarBorderWidth must be greater than or equal to 0'
-      );
-      avatarBorderWidth = 0;
-    }
+    // if (avatarBorderWidth < 0) {
+    //   console.warn(
+    //     'GroupHug: avatarBorderWidth must be greater than or equal to 0'
+    //   );
+    //   avatarBorderWidth = 0;
+    // }
     if (transparency < 0 || transparency > 1) {
       console.warn('GroupHug: transparency must be between 0 and 1');
       transparency = Math.max(0, Math.min(1, transparency));
@@ -238,7 +238,7 @@ const GroupHug = memo(
           self: myState,
           darkMode,
           avatarTextColor,
-          avatarBorderWidth,
+          /* avatarBorderWidth, */
           avatarBackgroundColor,
           overlapping,
           transparency,
@@ -281,7 +281,7 @@ export default GroupHug;
 
 function ImageAvatar({ user }) {
   const ctx = useContext(GroupHugCtx);
-  const { size, avatarBorderWidth } = ctx!;
+  const { size, /* avatarBorderWidth */ } = ctx!;
   return (
     <>
       <img
@@ -291,7 +291,7 @@ function ImageAvatar({ user }) {
           height: `${size}px`,
           objectFit: 'contain',
           // opacity: `${user.state === 'away' ? '0.5' : '1'}`,
-          border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
+          /* border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`, */
           background: `${user.avatarBackgroundColor}`,
         }}
         src={user.avatar}
@@ -306,7 +306,7 @@ function ImageAvatar({ user }) {
 
 function TextAvatar({ user }) {
   const ctx = useContext(GroupHugCtx);
-  const { size, avatarBorderWidth, placeholder } = ctx!;
+  const { size, /* avatarBorderWidth, */ placeholder } = ctx!;
   if (!!!user.name) return null;
 
   return (
@@ -319,7 +319,7 @@ function TextAvatar({ user }) {
           height: `${size}px`,
           lineHeight: `${size}px`,
           background: `${user.avatarBackgroundColor}`,
-          border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
+          /* border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`, */
           fontSize: '14px',
           color: user.avatarTextColor,
         }}
@@ -336,7 +336,7 @@ function TextAvatar({ user }) {
 function Others() {
   const [display, setDisplay] = useState(false);
   const ctx = useContext(GroupHugCtx);
-  const { users, size, maximum, overlapping, avatarBorderWidth } = ctx!;
+  const { users, size, maximum, overlapping, /* avatarBorderWidth */ } = ctx!;
 
   return (
     <div
@@ -350,7 +350,7 @@ function Others() {
           minWidth: `${size}px`,
           width: `${size}px`,
           height: `${size}px`,
-          borderWidth: `${avatarBorderWidth}px`,
+          /* borderWidth: `${avatarBorderWidth}px`, */
         }}
         className={`group-hug-box-content group-hug-relative group-hug-text-[#666666] group-hug-text-[12px] group-hug-font-[500]
     group-hug-border-[#999999]
@@ -461,7 +461,7 @@ function Popover({ display, name, id }) {
             }}
           ></div>
           <span
-            className="group-hug-bg-white dark:group-hug-bg-[#34323E] group-hug-p-2 group-hug-rounded-[6px] group-hug-whitespace-nowrap 
+            className="group-hug-bg-white dark:group-hug-bg-[#34323E] group-hug-p-2 group-hug-rounded-[6px] group-hug-whitespace-nowrap
     group-hug-shadow-[0px_1px_4px_0px_rgb(0_0_0_/_0.1)] group-hug--translate-y-[5px]"
           >{`${name} ${id === self.id ? '(you)' : ''}`}</span>
         </>
@@ -509,7 +509,7 @@ function Mask() {
 
   return (
     <span
-      className="group-hug-absolute group-hug-top-[0px] group-hug-left-[0px] 
+      className="group-hug-absolute group-hug-top-[0px] group-hug-left-[0px]
   group-hug-bg-white dark:group-hug-bg-black group-hug-rounded-full"
       style={{
         width: `calc(100%)`,
