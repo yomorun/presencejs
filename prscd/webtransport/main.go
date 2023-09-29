@@ -90,7 +90,7 @@ func handleConnection(sess quic.Connection) {
 		return
 	}
 
-	// Step 3: wait for reading client HTTP CONNECT (client indicatation)
+	// Step 3: wait for reading client HTTP CONNECT (client indication)
 	stream, err := sess.AcceptStream(context.Background())
 	if err != nil {
 		log.Error("webtrans|acceptStream error: %s", err)
@@ -132,12 +132,15 @@ func handleConnection(sess quic.Connection) {
 	peer := chirp.Node.AddPeer(pconn, userID, appID)
 	log.Info("[%s-%s] Upgrade done!", peer.Sid, peer.Cid)
 
+	// TODO: send `connected_ack` signalling to client
+
 	// Handle Datagram
 	go func() {
 		for {
 			msg, err := sess.ReceiveMessage(context.Background())
 			if err != nil {
 				// ignore errors here, we will handle client close event in stream loop
+				log.Error("-->[%s] stream.Read error: %s", pconn.RemoteAddr(), err)
 				return
 			}
 			log.Debug("ReceiveMessage: %s", msg)

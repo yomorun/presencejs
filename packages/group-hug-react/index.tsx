@@ -100,6 +100,7 @@ const GroupHug = /*memo(*/
     const [peers, setPeers] = useState<User[]>([]);
     const [connected, setConnected] = useState(false);
     const [ch, setChannel] = useState<IChannel | null>(null);
+    const [visibility, setVisibility] = useState('online');
 
     // when page load, join the channel
     useEffect(() => {
@@ -133,46 +134,36 @@ const GroupHug = /*memo(*/
       // listen to other peers joining the channel
       const unsubscribePeers = ch.subscribePeers(_peers => {
         console.log(">>>>>>>>>>>subscribePeers", _peers)
-        const peers: User[] = [];
-        (_peers as User[]).forEach(p => {
-          if (MPOP) {
-            // MPOP: this is a hack to avoid duplicate peers
-            if (!peers.find(user => user.id === p.id)) {
-              peers.push(p);
-            }
-          } else {
-            peers.push(p);
-          }
-        });
-        setPeers(peers)
+        setPeers([..._peers as User[]])
       });
 
       return () => {
-        unsubscribePeers?.();
+        unsubscribePeers();
       };
     }, [ch]);
 
     useEffect(() => {
-      console.log(`$$$ Register [change-state] event listener on ch:`, ch?.id)
       if (!ch) {
         console.log(`\tch is null`)
         return;
       }
+
+      console.log(`$$$ Register [change-state] event listener on ch:`, ch?.id)
       const unsubscribe = ch.subscribe<User>(
         'change-state',
         (p: User) => {
           console.log("\t.on('change-state')", p)
-          // find user
-          const userIndex = peers.findIndex(user => user.id === p.id);
-          if (userIndex !== -1) {
-            setPeers(prevPeers => [
+          setPeers(prevPeers => {
+            const userIndex = prevPeers.findIndex(user => user.id === p.id);
+            return [
               ...prevPeers.slice(0, userIndex),
               p,
               ...prevPeers.slice(userIndex + 1)
-            ]);
-          }
+            ]
+          })
         }
       );
+
       return () => {
         unsubscribe();
       };
@@ -180,7 +171,7 @@ const GroupHug = /*memo(*/
 
     // when my state changes, broadcast to other peers
     useEffect(() => {
-      console.log(`$$$ Register [my-state-change] event listener on ch:`, ch?.id)
+      console.log(`$$$ Trigger [my-state-change] on ch:`, ch?.id)
       if (!ch) return;
 
       const state = document.hidden ? 'away' : 'online';
@@ -194,30 +185,31 @@ const GroupHug = /*memo(*/
         avatarBackgroundColor,
       };
       setMyState(newState);
-      console.log('.........should broadcast.my.new.state.xxx', newState)
-      // ch.broadcast('change-state', newState);
+      // console.log('.........should broadcast.my.new.state.xxx', newState)
+      ch.broadcast('change-state', newState);
     }, [
       name,
       avatar,
+      visibility,
     ]);
 
     // observe page visibility change
     useEffect(() => {
-      console.log(`$$$ Register [visibilitychange] event listener on ch:`, ch?.id)
-      if (!ch) return;
+      console.log(`$$$ Register [visibilitychange] event listener`)
+      // if (!ch) return;
 
-      const visibilitychangeCb = () => {
-        const state = document.hidden ? 'away' : 'online';
-        setMyState(prevState => ({ ...prevState, state }));
+      function visibilitychangeCb() {
+        // const state = document.hidden ? 'away' : 'online';
+        // setMyState(prevState => ({ ...prevState, state }));
+        setVisibility(document.hidden ? 'away' : 'online')
         console.log('.........should.broadcast.visibilitychangeCb', new Date())
-        // ch.broadcast('change-state', newState);
       };
       document.addEventListener('visibilitychange', visibilitychangeCb);
 
       return () => {
         document.removeEventListener('visibilitychange', visibilitychangeCb);
       };
-    }, [ch]);
+    }, []);
 
     if (!connected) {
       return <div></div>;
