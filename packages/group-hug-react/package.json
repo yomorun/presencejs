@@ -1,6 +1,6 @@
 {
   "name": "@yomo/group-hug-react",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Live collaborator avatars for multiplayer web apps",
   "keywords": [
     "webtransport",
