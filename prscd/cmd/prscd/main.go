@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -23,9 +24,19 @@ import (
 var log = util.Log
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal(err)
+	// check if .env file is exists
+	_, err := os.Stat(".env")
+	if err == nil {
+		log.Debug("loading .env file...")
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// check MESH_ID env
+	if os.Getenv("MESH_ID") == "" {
+		log.Fatal(errors.New("env check failed"))
 	}
 
 	chirp.CreateNodeSingleton()
@@ -132,7 +143,7 @@ func startYomoZipper() {
 	log.Debug("integrated YoMo config: %v", conf)
 	log.Debug("integrated YoMo zipper: %s", fmt.Sprintf("%s:%d", conf.Host, conf.Port))
 
-	zipper, err := yomo.NewZipper(conf.Name, conf.Functions, conf.Downstreams)
+	zipper, err := yomo.NewZipper(conf.Name, conf.Downstreams)
 	if err != nil {
 		log.Fatal(err)
 	}

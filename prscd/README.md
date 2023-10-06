@@ -34,6 +34,12 @@ Compile:
 make dist
 ```
 
+The docker way:
+
+```bash
+docker run -d --network host --env-file ./run/env -v ./run/prscd.cella.fun.cert:/app/ssl.cert -v ./run/prscd.cella.fun.key:/app/ssl.key -p 443:8443 -p 443:8443/udp -p 61226:61226 prscd:latest
+```
+
 ### ☝🏻 Host on Single Cloud Region
 
 TODO: how to deploy `prscd` on digitalocean

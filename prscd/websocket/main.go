@@ -140,6 +140,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 
 			// closeConn(conn, "886")
 			conn.Write(ws.CompiledClose)
+			conn.Close()
 			continue
 		}
 
