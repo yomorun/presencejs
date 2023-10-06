@@ -1,4 +1,4 @@
-import { decode, encode as msgPackEncode } from '@msgpack/msgpack';
+import { decode, encode } from '@msgpack/msgpack';
 import { JsonSerializer } from './JsonSerializer';
 import { Logger } from './logger';
 import { Peers } from './peers';
@@ -11,7 +11,7 @@ import {
   State,
 } from './types';
 
-const signalingEncode = (data: Signaling) => msgPackEncode(data);
+const signalingEncode = (data: Signaling) => encode(data);
 
 export class Channel implements IChannel {
   #transport: any;
@@ -39,7 +39,7 @@ export class Channel implements IChannel {
     this.#transport = transport;
     this.#logger = new Logger({
       enabled: options.debug,
-      module: 'Presence Channel',
+      module: 'presence.Channel:' + this.id,
     });
     this.#joinTimestamp = Date.now();
     this.#joinTimestamp;
@@ -90,13 +90,11 @@ export class Channel implements IChannel {
   }
 
   leave() {
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_offline',
-        c: this.id,
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_offline',
+      c: this.id,
+    });
     // this.#transport.close();
   }
 
@@ -107,29 +105,28 @@ export class Channel implements IChannel {
   }
 
   #joinChannel() {
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'channel_join',
-        c: this.id,
-        pl: msgPackEncode(this.#state),
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'channel_join',
+      c: this.id,
+      pl: encode(this.#state),
+    });
   }
 
   #broadcast<T>(event: string, data: T) {
-    this.#write(
-      signalingEncode({
-        t: 'data',
-        c: this.id,
-        pl: msgPackEncode({
-          event, data,
-        }),
-      })
-    );
+    this.#write({
+      t: 'data',
+      c: this.id,
+      pl: encode({
+        event, data,
+      }),
+    });
   }
 
-  async #write(data: Uint8Array) {
+  // #write(data: Uint8Array) {
+  #write(sig: Signaling) {
+    this.#logger.log('write sig: ', sig);
+    const data = signalingEncode(sig);
     if (!this.#writer) {
       if (this.#transport.datagrams.writable.locked) {
         try {
@@ -140,17 +137,11 @@ export class Channel implements IChannel {
       }
       if (this.#reliable) {
         this.#writer = this.#transport.createSendStream().getWriter();
+      } else {
+        this.#writer = this.#transport.datagrams.writable.getWriter();
       }
-      this.#writer = this.#transport.datagrams.writable.getWriter();
     }
-    // check connection state
-    // FIXME: infinite wait
-    // if (await this.#transport.closed) {
-    //   throw new Error('Connection is disconnected');
-    // }
-    await this.#writer.ready;
     this.#writer.write(data);
-    // writer.close();
   }
 
   async #read() {
@@ -166,39 +157,38 @@ export class Channel implements IChannel {
         const data = new Uint8Array(value);
         const signaling: Signaling = decode(data) as Signaling;
         if (signaling.t === 'control') {
-          this.#logger.log(
-            'control ',
-            `op: ${signaling.op}\n`,
-            `p: ${signaling.p}\n`,
-            'pl: ',
-            signaling.pl
-          );
+          this.#logger.log('>sig[control]', `op: ${signaling.op}, p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
           if (signaling.op === 'channel_join') {
+            // when receive `channel_join`, means join success, should broadcast `peer_state` to this channel
+            // to notify other peers that I'm online
             this.#online();
             this.#syncState();
             this.#joinCallbackFns.forEach((fn) => fn());
             continue;
           }
           if (signaling.op === 'peer_online') {
-            // console.log('*************peer_online: ', signaling);
-            this.#handleOnline(signaling.p!);
+            // someone is online
+            this.#handlePeerOnline(signaling.p!);
             continue;
           }
           if (signaling.op === 'peer_offline') {
-            this.#offline(signaling.p!);
+            // someone is offline
+            this.#handlePeerOffline(signaling.p!);
             continue;
           }
-
           if (signaling.op === 'peer_state') {
-            // console.log('*************peer_state: ', signaling);
-            this.#handleSync({
+            // someone's state is changed
+            this.#handlePeerState({
               id: signaling.p,
               ...(decode(signaling.pl!) as any),
             });
             continue;
           }
         } else if (signaling.t === 'data') {
+          this.#logger.log('>sig[data]', `p: ${signaling.p}, pl: ${signaling.pl?.byteLength}`);
+          // the payload of signaling is encoded by msgpack
           let { event, data } = decode(signaling.pl!) as any;
+          // the data of the payload is encoded by JSON
           data = JsonSerializer.deserialize(data);
           if (this.#subscribers.has(event)) {
             this.#subscribers.get(event)!(data, { id: signaling.p! });
@@ -211,7 +201,8 @@ export class Channel implements IChannel {
     }
   }
 
-  #handleOnline(id: string) {
+  // [receive] signal: peer_online
+  #handlePeerOnline(id: string) {
     if (id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => member.id === id);
       if (idx > -1) {
@@ -219,52 +210,50 @@ export class Channel implements IChannel {
       } else {
         this.#members.push({ id });
       }
+      // when receive `peer_online`, should broadcast `peer_state` to this channel
       this.#syncState();
-      this.#peers?.trigger(this.#members);
+      // this.#peers?.trigger(this.#members);
     }
   }
 
-  #handleSync(payload: any) {
-    if (payload.id !== this.#state.id) {
+  // [receive] signal: peer_state
+  #handlePeerState(peer: State) {
+    if (peer.id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => {
-        return String(member.id) === String(payload.id);
+        return String(member.id) === String(peer.id);
       });
-
       if (idx > -1) {
-        this.#members[idx] = payload;
+        this.#members[idx] = peer;
       } else {
-        this.#members.push(payload);
+        this.#members.push(peer);
       }
       this.#peers?.trigger(this.#members);
     }
   }
 
+  // [send] signal: peer_online
   #online() {
-    this.#logger.log(`online cid: ${this.id} state: `, this.#state);
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_online',
-        c: this.id,
-        p: this.#state.id,
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_online',
+      c: this.id,
+      // p: this.#state.id,
+    })
   }
 
+  // [send] signal: peer_state
   #syncState() {
-    this.#logger.log('sync state: ', this.#state);
-    this.#write(
-      signalingEncode({
-        t: 'control',
-        op: 'peer_state',
-        c: this.id,
-        p: this.#state.id,
-        pl: msgPackEncode(this.#state),
-      })
-    );
+    this.#write({
+      t: 'control',
+      op: 'peer_state',
+      c: this.id,
+      // p: this.#state.id,
+      pl: encode(this.#state),
+    })
   }
 
-  #offline(id: string) {
+  // [receive] signal: peer_offline
+  #handlePeerOffline(id: string) {
     this.#logger.log(`offline id: ${id}`);
     if (id !== this.#state.id) {
       const idx = this.#members.findIndex((member) => {

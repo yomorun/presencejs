@@ -44,15 +44,15 @@ import {
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import GroupHug from '@yomo/group-hug-react';
 import { createPresence } from '@yomo/presence';
 import jsLanguageSyntax from 'highlight.js/lib/languages/javascript';
 import { lowlight } from 'lowlight';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LiveEditor, LiveError } from 'react-live';
-import './dist/style.css';
-import GroupHug from './index';
 import metadata from './metadata.json';
+import './style.css';
 // @ts-ignore
 import { themes } from 'prism-react-renderer';
 

@@ -9,7 +9,7 @@ require (
 	github.com/quic-go/quic-go v0.38.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	github.com/yomorun/psig v1.0.0
-	github.com/yomorun/yomo v1.15.1
+	github.com/yomorun/yomo v1.16.1
 	golang.org/x/sys v0.12.0
 )
 

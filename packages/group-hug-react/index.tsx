@@ -1,11 +1,12 @@
+/// <reference lib="dom" />
+
 import { IChannel } from '@yomo/presence';
 import Avvvatars from 'avvvatars-react';
 import React, {
   createContext,
-  memo,
   useContext,
   useEffect,
-  useState,
+  useState
 } from 'react';
 import { GroupHugProps, User } from './types.d';
 
@@ -20,7 +21,7 @@ const colors = [
 ];
 
 const GroupHugCtx = createContext<{
-  users: User[];
+  peers: User[];
   self: User;
   size: number;
   darkMode: boolean;
@@ -37,28 +38,41 @@ const GroupHugCtx = createContext<{
   onMouseLeave: (user: User) => void;
 } | null>(null);
 
-const GroupHug = memo(
+const idx = Math.floor(Math.random() * colors.length);
+
+
+const GroupHug = /*memo(*/
   ({
     presence,
+    channel,
     id,
     avatar = '',
     darkMode = false,
     avatarTextColor = '#000',
-    avatarBorderColor = '',
+    avatarBorderColor = colors[idx],
     avatarBorderWidth = 2,
-    avatarBackgroundColor = '',
+    avatarBackgroundColor = colors[idx],
     name,
-    size = 24,
+    size = 36,
     overlapping = true,
     transparency = 0.5,
     maximum = 5,
-    MPOP = true,
+    MPOP = false,
     popover,
     placeholder = 'shape',
     onMouseEnter = () => { },
     onMouseLeave = () => { },
   }: GroupHugProps) => {
-    // #region validate props
+    if (!presence) {
+      console.warn('GroupHug: presence is required');
+      return null;
+    }
+
+    if (!channel) {
+      console.warn('GroupHug: channel is required');
+      return null;
+    }
+
     if (size < 8) {
       console.warn('GroupHug: size must be greater than 8');
       size = 8;
@@ -73,16 +87,7 @@ const GroupHug = memo(
       console.warn('GroupHug: transparency must be between 0 and 1');
       transparency = Math.max(0, Math.min(1, transparency));
     }
-    // #endregion
 
-    // #region define the grouphug state
-    if (!avatarBorderColor) {
-      let idx = Math.floor(Math.random() * colors.length);
-      avatarBorderColor = colors[idx];
-    }
-    if (!avatarBackgroundColor) {
-      avatarBackgroundColor = avatarBorderColor;
-    }
     const [myState, setMyState] = useState<User>({
       id,
       avatar,
@@ -92,91 +97,82 @@ const GroupHug = memo(
       avatarBorderColor,
       avatarTextColor,
     });
-    const [users, setUsers] = useState<User[]>([myState]);
+    const [peers, setPeers] = useState<User[]>([]);
     const [connected, setConnected] = useState(false);
-    const [channel, setChannel] = useState<IChannel | null>(null);
-    // #endregion
+    const [ch, setChannel] = useState<IChannel | null>(null);
+    const [visibility, setVisibility] = useState('online');
 
-    // #region initialize the presence connection
+    // when page load, join the channel
     useEffect(() => {
-      (async () => {
+      const joinChannel = async () => {
         try {
           const yomo = await presence;
-          const channel = await yomo.joinChannel('group-hug', myState);
+          const ch = await yomo.joinChannel(channel, myState);
+          console.log('--------------------yomo.joinChannel', new Date())
           setConnected(true);
-          setChannel(channel);
+          setChannel(ch);
         } catch (e) {
           console.log(e);
         }
-      })();
+      };
+
+      joinChannel();
 
       return () => {
-        channel?.leave();
+        ch?.leave();
       };
     }, []);
-    // #endregion
 
-    // #region subscribe to other peers joining the channel
+    // when channel is ready, listen to other peers joining/leaving the channel
     useEffect(() => {
-      if (!channel) {
+      console.log(`$$$ Register [subscribePeers] on ch:`, ch?.id)
+      if (!ch) {
+        console.log(`\tch is null`)
         return;
       }
 
       // listen to other peers joining the channel
-      const unsubscribePeers = channel.subscribePeers(peers => {
-        const users: User[] = [myState];
-        (peers as User[]).forEach(peer => {
-          if (MPOP) {
-            // MPOP: this is a hack to avoid duplicate users
-            if (!users.find(user => user.id === peer.id)) {
-              users.push(peer);
-            }
-          } else if (!MPOP) {
-            users.push(peer);
-          }
-        });
-        setUsers([
-          myState,
-          ...(peers as User[]).filter(peer => 'avatar' in peer),
-        ]);
+      const unsubscribePeers = ch.subscribePeers(_peers => {
+        console.log(">>>>>>>>>>>subscribePeers", _peers)
+        setPeers([..._peers as User[]])
       });
 
       return () => {
-        unsubscribePeers?.();
+        unsubscribePeers();
       };
-    }, [channel]);
-    // #endregion
+    }, [ch]);
 
-    // #region
     useEffect(() => {
-      if (!channel) return;
-      const unsubscribe = channel.subscribe(
+      if (!ch) {
+        console.log(`\tch is null`)
+        return;
+      }
+
+      console.log(`$$$ Register [change-state] event listener on ch:`, ch?.id)
+      const unsubscribe = ch.subscribe<User>(
         'change-state',
-        ({ payload, state: { id } }: any) => {
-          // find user
-          const user = users.find(user => user.id === id);
-          if (user) {
-            setUsers(
-              users.map(user => {
-                if (user.id === id) {
-                  console.log(payload, 'payload');
-                  return payload;
-                }
-                return user;
-              })
-            );
-          }
+        (p: User) => {
+          console.log("\t.on('change-state')", p)
+          setPeers(prevPeers => {
+            const userIndex = prevPeers.findIndex(user => user.id === p.id);
+            return [
+              ...prevPeers.slice(0, userIndex),
+              p,
+              ...prevPeers.slice(userIndex + 1)
+            ]
+          })
         }
       );
+
       return () => {
         unsubscribe();
       };
-    }, [channel, users]);
-    // #endregion
+    }, [ch]);
 
-    // #region add event listeners to update the user state
+    // when my state changes, broadcast to other peers
     useEffect(() => {
-      if (!channel) return;
+      console.log(`$$$ Trigger [my-state-change] on ch:`, ch?.id)
+      if (!ch) return;
 
       const state = document.hidden ? 'away' : 'online';
       const newState: User = {
@@ -189,42 +185,31 @@ const GroupHug = memo(
         avatarBackgroundColor,
       };
       setMyState(newState);
-      setUsers(users => {
-        const idx = users.findIndex(user => user.id === id);
-        if (idx > -1) {
-          users[idx] = newState;
-        }
-        return users;
-      });
-      channel.broadcast('change-state', newState);
+      // console.log('.........should broadcast.my.new.state.xxx', newState)
+      ch.broadcast('change-state', newState);
     }, [
-      channel,
       name,
       avatar,
-      avatarTextColor,
-      avatarBorderColor,
-      avatarBackgroundColor,
+      visibility,
     ]);
 
+    // observe page visibility change
     useEffect(() => {
-      if (!channel) return;
+      console.log(`$$$ Register [visibilitychange] event listener`)
+      // if (!ch) return;
 
-      const visibilitychangeCb = () => {
-        const state = document.hidden ? 'away' : 'online';
-        const newState: User = {
-          ...myState,
-          state,
-        };
-        setMyState(newState);
-        channel.broadcast('change-state', newState);
+      function visibilitychangeCb() {
+        // const state = document.hidden ? 'away' : 'online';
+        // setMyState(prevState => ({ ...prevState, state }));
+        setVisibility(document.hidden ? 'away' : 'online')
+        console.log('.........should.broadcast.visibilitychangeCb', new Date())
       };
       document.addEventListener('visibilitychange', visibilitychangeCb);
 
       return () => {
         document.removeEventListener('visibilitychange', visibilitychangeCb);
       };
-    }, [channel, myState]);
-    // #endregion
+    }, []);
 
     if (!connected) {
       return <div></div>;
@@ -234,7 +219,7 @@ const GroupHug = memo(
       <GroupHugCtx.Provider
         value={{
           size,
-          users,
+          peers,
           self: myState,
           darkMode,
           avatarTextColor,
@@ -254,13 +239,14 @@ const GroupHug = memo(
           className={`group-hug-relative group-hug-flex ${darkMode ? 'group-hug-dark' : ''
             }`}
           style={{
-            marginRight: `${14 - Math.min(users.length, 6) * 2}px`,
+            marginRight: `${14 - Math.min(peers.length, 6) * 2}px`,
           }}
         >
-          {users.slice(0, maximum + 1).map((user, i) => {
+          {peers.slice(0, maximum + 1).map((user, i) => {
             if (i < maximum) {
               return (
                 <Avatar
+                  key={user.id}
                   style={{
                     transform: `translateX(${i * -(overlapping ? 8 : 0)}px)`,
                     zIndex: `${i}`,
@@ -270,12 +256,12 @@ const GroupHug = memo(
               );
             }
           })}
-          {users.length > maximum && <Others />}
+          {peers.length > maximum && <Others />}
         </div>
       </GroupHugCtx.Provider>
     );
   }
-);
+/*);*/
 
 export default GroupHug;
 
@@ -318,8 +304,8 @@ function TextAvatar({ user }) {
           width: `${size}px`,
           height: `${size}px`,
           lineHeight: `${size}px`,
-          background: `${user.avatarBackgroundColor}`,
-          border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
+          // background: `${user.avatarBackgroundColor}`,
+          // border: `${avatarBorderWidth}px solid ${user.avatarBorderColor}`,
           fontSize: '14px',
           color: user.avatarTextColor,
         }}
@@ -336,7 +322,7 @@ function TextAvatar({ user }) {
 function Others() {
   const [display, setDisplay] = useState(false);
   const ctx = useContext(GroupHugCtx);
-  const { users, size, maximum, overlapping, avatarBorderWidth } = ctx!;
+  const { peers, size, maximum, overlapping, avatarBorderWidth } = ctx!;
 
   return (
     <div
@@ -370,7 +356,7 @@ function Others() {
           className="group-hug-absolute group-hug-inline-flex group-hug-items-center group-hug-justify-center group-hug-w-full group-hug-h-full group-hug-rounded-full "
           onClick={() => setDisplay(!display)}
         >
-          +{users.length - maximum}
+          +{peers.length - maximum}
         </span>
 
         <span
@@ -400,7 +386,7 @@ function Others() {
           ></div>
 
           <div className="group-hug-absolute group-hug-bg-white dark:group-hug-bg-[#34323E] group-hug-p-[10px] group-hug-shadow-[0px_1px_4px_0px_rgb(0_0_0_/_0.1)] group-hug-rounded-[6px] group-hug-translate-y-[5px]">
-            {users.slice(5, users.length).map(user => (
+            {peers.slice(5, peers.length).map(user => (
               <div
                 key={user.id}
                 className="group-hug-flex group-hug-items-center group-hug-gap-2 group-hug-p-[10px]

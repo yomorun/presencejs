@@ -2,16 +2,25 @@
 
 ![](https://badgen.net/npm/v/@yomo/presence)
 
-`Presencejs` is a JavaScript library that enables the creation of real-time web applications with a secure, low-latency, and high-performance geo-distributed architecture.
+`Presencejs` is a JavaScript library that enables the creation of real-time web
+applications with a secure, low-latency, and high-performance geo-distributed
+architecture.
 
 Key Features:
 
-- **Geo-distributed Architecture**: Deploy your real-time backend close to users all over the world for better performance.
-- **WebTransport Support**: WebTransport is an new API that offers low-latency, bidirectional, client-server messaging.
-- **Secure**, **low-latency**, and **high-performance**: PresenceJS prioritizes security, speed, and performance for a seamless user experience.
-- **Real-time and collaborative experience**: With PresenceJS, components receive data flow in real time, ensuring fast and reactive UI by offering the flexibility to send either unreliable or reliable data
-- **Easy to use**: PresenceJS is simple to implement, making it an accessible solution for developers.
-- **Free for self-managed hosting**: PresenceJS is free to use for self-managed hosting, making it an affordable choice for projects of any size.
+- **Geo-distributed Architecture**: Deploy your real-time backend close to users
+  all over the world for better performance.
+- **WebTransport Support**: WebTransport is an new API that offers low-latency,
+  bidirectional, client-server messaging.
+- **Secure**, **low-latency**, and **high-performance**: PresenceJS prioritizes
+  security, speed, and performance for a seamless user experience.
+- **Real-time and collaborative experience**: With PresenceJS, components
+  receive data flow in real time, ensuring fast and reactive UI by offering the
+  flexibility to send either unreliable or reliable data
+- **Easy to use**: PresenceJS is simple to implement, making it an accessible
+  solution for developers.
+- **Free for self-managed hosting**: PresenceJS is free to use for self-managed
+  hosting, making it an affordable choice for projects of any size.
 
 ## 🌟 Showcase
 
@@ -36,10 +45,10 @@ Using npm
 $ npm i --save @yomo/presence
 ```
 
-Using yarn
+Using bun.js
 
 ```
-$ yarn add @yomo/presence
+$ bun add @yomo/presence
 ```
 
 Using pnpm
@@ -51,10 +60,10 @@ $ pnpm i @yomo/presence
 #### Create a `Presence` instance
 
 ```js
-import Presence from '@yomo/presence';
+import Presence from "@yomo/presence";
 
 // create an instance.
-const p = new Presence('https://prsc.yomo.dev', {
+const p = new Presence("https://prsc.yomo.dev", {
   url: process.env.NEXT_PUBLIC_PRESENCE_URL,
   publicKey: process.env.NEXT_PUBLIC_PRESENCE_PUBLIC_KEY,
   id,
@@ -62,8 +71,8 @@ const p = new Presence('https://prsc.yomo.dev', {
   debug: true,
 });
 
-p.on('connected', () => {
-    console.log('Connected to server: ', p.host);
+p.on("connected", () => {
+  console.log("Connected to server: ", p.host);
 });
 ```
 
@@ -85,20 +94,21 @@ c.subscribePeers((peers) => {
 
 ```js
 const cb = () => {
-  const state = document.hidden ? 'away' : 'online';
-  c.broadcast('hidden-state-change', { state });
+  const state = document.hidden ? "away" : "online";
+  c.broadcast("hidden-state-change", { state });
 };
-document.addEventListener('visibilitychange', cb)
+document.addEventListener("visibilitychange", cb);
 ```
 
 #### Subscribe messages from the other peers
 
 ```js
 const unsubscribe = channel.subscribe(
-    'hidden-state-change',
-    ({ payload, peerState }) => {
-        console.log(`${peerState.id} change visibility to: ${payload}`)
-    })
+  "hidden-state-change",
+  ({ payload, peerState }) => {
+    console.log(`${peerState.id} change visibility to: ${payload}`);
+  },
+);
 ```
 
 ### 2. Start `prscd` backend service

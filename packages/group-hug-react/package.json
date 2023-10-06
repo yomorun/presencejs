@@ -1,6 +1,6 @@
 {
   "name": "@yomo/group-hug-react",
-  "version": "1.0.10",
+  "version": "1.0.15",
   "description": "Live collaborator avatars for multiplayer web apps",
   "keywords": [
     "webtransport",
@@ -11,43 +11,48 @@
     "avatar"
   ],
   "license": "MIT",
-  "module": "./dist/index.esm.js",
-  "types": "./types.d.ts",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "./types.d.ts"
+    "dist"
   ],
   "exports": {
     ".": {
-      "types": "./types.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
     },
     "./package.json": "./package.json",
     "./style.css": "./dist/style.css"
   },
-  "repository": "github.com:yomorun/presencejs",
+  "repository": {
+    "type": "git",
+    "url": "github.com:yomorun/presencejs"
+  },
   "bugs": {
     "url": "https://github.com/yomorun/presencejs/issues?q=is%3Aissue+label%3Agrouphug+"
   },
   "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
   "scripts": {
-    "build:css": "bunx tailwindcss -i ./style.css -o ./out/style.css",
+    "dev": "bun x vite -d",
+    "generate:types": "bun x tsc --jsx react",
+    "build:css": "tailwindcss -i ./style.css -o ./out/style.css",
     "build:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external",
-    "build:docs": "npm run build:css && vite build",
-    "build": "run-p build:js build:css",
-    "watch:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --watch",
-    "watch:js": "bun build ./index.tsx --outdir ./out --target browser --sourcemap=external --watch",
-    "start:vite": "",
-    "start": "",
-    "dist:js": "bun build ./index.tsx --outdir ./dist --target browser --sourcemap=external",
-    "dist:css": "bunx tailwindcss -i ./style.css -o ./dist/style.css --minify",
-    "dist": "rm -rf ./dist && bun run dist:js && bun run dist:css"
+    "build": "bun run build:js && bun run build:css",
+    "dist:js": "bun x vite build",
+    "dist:css": "bun x tailwindcss -i ./style.css -o ./dist/style.css --minify",
+    "dist:types": "cp types.d.ts dist/index.d.ts",
+    "dist": "rm -rf ./dist && bun run dist:js && bun run dist:css && bun run dist:types"
   },
   "devDependencies": {
-    "react": "^18.2.0"
+    "@types/react": "^18.2.22",
+    "bun-types": "^1.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.4.9"
   },
   "dependencies": {
-    "@yomo/presence": "workspace:*",
+    "@yomo/presence": "^2.2.18",
     "avvvatars-react": "^0.4.2"
   }
 }
