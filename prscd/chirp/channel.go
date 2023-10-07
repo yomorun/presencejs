@@ -2,6 +2,7 @@
 package chirp
 
 import (
+	"os"
 	"sync"
 
 	"github.com/vmihailenco/msgpack/v5"
@@ -12,8 +13,8 @@ import (
 // Channel describes a message channel.
 type Channel struct {
 	UniqID string   // uniq id
-	AppID  string   // TODO: APP_ID
 	pdic   sync.Map // all peers subscribed this channel
+	realm  *node    // the node which this channel belongs to
 }
 
 // AddPeer add peer to this channel.
@@ -32,9 +33,9 @@ func (c *Channel) RemovePeer(p *Peer) {
 // broadcast to all nodes.
 func (c *Channel) Broadcast(sig *psig.Signalling) {
 	sigSentOverYoMo := sig.Clone()
-	sigSentOverYoMo.AppID = c.AppID
-	sigSentOverYoMo.MeshID = Node.MeshID
-	go Node.BroadcastToYoMo(&sigSentOverYoMo)
+	sigSentOverYoMo.AppID = c.realm.id
+	sigSentOverYoMo.MeshID = os.Getenv("MESH_ID")
+	go c.realm.BroadcastToYoMo(&sigSentOverYoMo)
 }
 
 // Dispatch messages to all peers in this channel of current node.

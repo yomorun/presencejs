@@ -56,16 +56,15 @@ func (s *SenderMock) Broadcast(tag uint32, data []byte) error {
 
 func (s *SenderMock) SetDataTag(tag frame.Tag) {}
 
-var channelName, appID, peerName string
+var channelName, peerName string
+var appID = "test_appid"
+var n = GetOrCreateRealm(appID)
 
 func init() {
-	CreateNodeSingleton()
-
 	// mock YoMo Source
-	Node.sndr = &SenderMock{}
+	n.sndr = &SenderMock{}
 
 	channelName = "test_channel"
-	appID = "test_appid"
 	peerName = "test_peer"
 
 	// error level
@@ -73,35 +72,35 @@ func init() {
 }
 
 func Test_node_AddPeer(t *testing.T) {
-	peer := Node.AddPeer(NewMockConnection(peerName), channelName, appID)
+	peer := n.AddPeer(NewMockConnection(peerName), channelName)
 	peer.Join(channelName)
 
 	assert(t, peer != nil, "peer should not be nil")
-	assert(t, peer.AppID == appID, "peer.AppID should be %s, but got %s", appID, peer.AppID)
+	assert(t, peer.realm.id == appID, "peer.AppID should be %s, but got %s", appID, peer.realm.id)
 	assert(t, peer.Channels != nil, "peer.Channels should not be nil")
 	assert(t, len(peer.Channels) == 1, "len(peer.Channels) should be 1, but got %d", len(peer.Channels))
 	assert(t, peer.Channels[channelName] != nil, "peer.Channels[%s] should not be nil", channelName)
-	ch := Node.FindChannel(appID, channelName)
+	ch := n.FindChannel(channelName)
 	assert(t, ch != nil, "node.cdic[%s] should not be nil", appID+"|"+channelName)
 	assert(t, ch.getLen() > 0, "len(node.cdic[%s].peers) should > 0", appID+"|"+channelName)
-	p, ok := Node.pdic.Load(appID + "|" + peerName)
+	p, ok := n.pdic.Load(peerName)
 	assert(t, ok, "node.pdic[%s] should not be nil", appID+"|"+peerName)
 	assert(t, p.(*Peer).Sid == peerName, "node.pdic[%s] should not be nil", appID+"|"+peerName)
 
 	peer.Leave(channelName)
 	assert(t, len(peer.Channels) == 0, "len(peer.Channels) should be 1, but got %d", len(peer.Channels))
-	ch = Node.FindChannel(appID, channelName)
+	ch = n.FindChannel(channelName)
 	assert(t, ch != nil, "node.cdic[%s] should not be nil", appID+"|"+channelName)
 	assert(t, ch.getLen() == 0, "len(node.cdic[%s].pdic) should be 0, but got %d", appID+"|"+channelName, ch.getLen())
-	p, ok = Node.pdic.Load(appID + "|" + peerName)
+	p, ok = n.pdic.Load(peerName)
 	assert(t, ok, "node.pdic[%s] should not be nil", appID+"|"+peerName)
 	assert(t, p.(*Peer).Sid == peerName, "node.pdic[%s] should not be nil", appID+"|"+peerName)
 
 	peer.Disconnect()
-	ch = Node.FindChannel(appID, channelName)
+	ch = n.FindChannel(channelName)
 	assert(t, ch != nil, "node.cdic[%s] should not be nil", appID+"|"+channelName)
 	assert(t, ch.getLen() == 0, "len(node.cdic[%s].pdic) should be 0, but got %d", appID+"|"+channelName, ch.getLen())
-	p, ok = Node.pdic.Load(appID + "|" + peerName)
+	p, ok = n.pdic.Load(peerName)
 	assert(t, !ok, "node.pdic[%s] should be nil", appID+"|"+peerName)
 	assert(t, p == nil, "node.pdic[%s] should not be nil", appID+"|"+peerName)
 }
@@ -114,7 +113,7 @@ func assert(t *testing.T, condition bool, format string, args ...any) {
 
 func BenchmarkPeerJoinAndLeave(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		peer := Node.AddPeer(NewMockConnection(peerName), channelName, appID)
+		peer := n.AddPeer(NewMockConnection(peerName), channelName)
 		peer.Join(channelName)
 		peer.Leave(channelName)
 		peer.Disconnect()
@@ -122,8 +121,8 @@ func BenchmarkPeerJoinAndLeave(b *testing.B) {
 }
 
 func Test_node_AuthUser(t *testing.T) {
-	var wantAppID = "YOMO_APP"
-	gotAppID, gotOk := Node.AuthUser("kmJAUnCtkWbkNnhXYtZAGEJzGDGpFo1e1vkp6cm")
+	var wantAppID = "kmJAUnCtkWbkNnhXYtZAGEJzGDGpFo1e1vkp6cm"
+	gotAppID, gotOk := AuthUser(wantAppID)
 	if gotAppID != wantAppID {
 		t.Errorf("node.AuthUser() gotAppID = %v, want %v", gotAppID, wantAppID)
 	}

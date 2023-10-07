@@ -107,7 +107,7 @@ func handleConnection(sess quic.Connection) {
 		return
 	}
 
-	appID, ok := chirp.Node.AuthUser(publicKey)
+	appID, ok := chirp.AuthUser(publicKey)
 	if !ok {
 		status = 401
 	}
@@ -129,7 +129,10 @@ func handleConnection(sess quic.Connection) {
 
 	// Step 5: start to processing presencejs protocol
 	pconn := chirp.NewWebTransportConnection(sess)
-	peer := chirp.Node.AddPeer(pconn, userID, appID)
+	// now, the authorization is done, we can create realm instance by appID
+	node := chirp.GetOrCreateRealm(appID)
+
+	peer := node.AddPeer(pconn, userID)
 	log.Info("[%s-%s] Upgrade done!", peer.Sid, peer.Cid)
 
 	// TODO: send `connected_ack` signalling to client

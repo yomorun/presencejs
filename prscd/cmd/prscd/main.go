@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"yomo.run/prscd/chirp"
 	"yomo.run/prscd/util"
 	"yomo.run/prscd/websocket"
 	"yomo.run/prscd/webtransport"
@@ -18,7 +17,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/yomorun/yomo"
 	"github.com/yomorun/yomo/pkg/config"
-	"github.com/yomorun/yomo/pkg/trace"
 )
 
 var log = util.Log
@@ -39,11 +37,10 @@ func main() {
 		log.Fatal(errors.New("env check failed"))
 	}
 
-	chirp.CreateNodeSingleton()
+	// chirp.CreateNodeSingleton()
 
 	// DEBUG env indicates development mode, verbose log
 	if os.Getenv("DEBUG") == "true" {
-		chirp.Node.Env = "development"
 		log.SetLogLevel(util.DEBUG)
 		log.Debug("IN DEVELOPMENT ENV")
 	}
@@ -55,38 +52,6 @@ func main() {
 		time.Sleep(2 * time.Second)
 	} else {
 		log.Debug("Skip start YOMO Zipper")
-	}
-
-	// YOMO_ZIPPER env indicates the endpoint of YoMo Zipper to connect
-	log.Debug("connect to YoMo Zipper: %s", os.Getenv("YOMO_ZIPPER"))
-
-	// add open tracing
-	tp, shutdown, err := trace.NewTracerProviderWithJaeger("prscd")
-	if err == nil {
-		log.Info("[%s] 🛰 trace enabled", "prscd")
-	}
-	defer shutdown(context.Background())
-
-	// sndr is sender to send data to other prscd nodes by YoMo
-	sndr := yomo.NewSource(
-		os.Getenv("YOMO_SNDR_NAME"),
-		os.Getenv("YOMO_ZIPPER"),
-		yomo.WithCredential(os.Getenv("YOMO_CREDENTIAL")),
-		yomo.WithTracerProvider(tp),
-	)
-
-	// rcvr is receiver to receive data from other prscd nodes by YoMo
-	rcvr := yomo.NewStreamFunction(
-		os.Getenv("YOMO_RCVR_NAME"),
-		os.Getenv("YOMO_ZIPPER"),
-		yomo.WithSfnCredential(os.Getenv("YOMO_CREDENTIAL")),
-		yomo.WithSfnTracerProvider(tp),
-	)
-
-	// connect to YoMo
-	err = chirp.Node.ConnectToYoMo(sndr, rcvr)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	// default addr and port listening

@@ -18,16 +18,15 @@ type Peer struct {
 	// Channel describes the channel which this peer joined.
 	Channels map[string]*Channel
 	// conn is the connection of this peer.
-	conn Connection
-	mu   sync.Mutex
-	// AppID is the id of the app which this peer belongs to.
-	AppID string
+	conn  Connection
+	mu    sync.Mutex
+	realm *node
 }
 
 // Join this peer to channel named `channelName`.
 func (p *Peer) Join(channelName string) {
 	// find channel on this node, if not exist, create it.
-	c := Node.GetOrAddChannel(p.AppID, channelName)
+	c := p.realm.GetOrAddChannel(channelName)
 
 	// add peer to this channel
 	c.AddPeer(p)
@@ -67,7 +66,7 @@ func (p *Peer) Leave(channelName string) {
 	p.mu.Unlock()
 
 	// remove peer from channel's peer list
-	c := Node.FindChannel(p.AppID, channelName)
+	c := p.realm.FindChannel(channelName)
 	if c == nil {
 		log.Error("peer.Leave(): channel is nil. pid: %s, channel: %s", p.Sid, channelName)
 		return
@@ -88,7 +87,7 @@ func (p *Peer) Disconnect() {
 		p.Leave(ch.UniqID)
 	}
 	// wipe this peer from current node
-	Node.RemovePeer(p.AppID, p.Sid)
+	p.realm.RemovePeer(p.Sid)
 }
 
 // BroadcastToChannel will broadcast message to channel.
