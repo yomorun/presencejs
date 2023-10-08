@@ -27,6 +27,7 @@ var allRealms sync.Map
 // AuthUserAndGetYoMoCredential is used to authenticate user by `publickey` and get credential used to connect to YoMo
 var AuthUserAndGetYoMoCredential func(publicKey string) (appID, credential string, ok bool)
 
+// GetOrCreateRealm get or create realm by appID, if realm is created, it will connect to yomo zipper with credential.
 func GetOrCreateRealm(appID string, credential string) (realm *node) {
 	log.Debug("get or create realm: %s", appID)
 	res, ok := allRealms.LoadOrStore(appID, &node{
@@ -74,11 +75,6 @@ func (n *node) RemovePeer(pid string) {
 	log.Info("[%s] node.remove_peer", pid)
 	n.pdic.Delete(pid)
 }
-
-// // getIDOnNode get the unique id of peer or channel on this node.
-// func (n *node) getIDOnNode(name string) string {
-// 	return name
-// }
 
 // GetOrCreateChannel get or create channel on this node.
 func (n *node) GetOrAddChannel(name string) *Channel {
@@ -201,18 +197,6 @@ func (n *node) BroadcastToYoMo(sig *psig.Signalling) {
 		log.Error("broadcast to yomo error: %+v", err)
 	}
 }
-
-// // Node describes current node, which is a singleton. There is only one node in a `prscd` process.
-// // But multiple `prscd` processes can be served on the same server.
-// var Node *node
-
-// // CreateNodeSingleton create the singleton node instance.
-// func CreateNodeSingleton() {
-// 	log.Info("init Node instance, mesh_id=%s", os.Getenv("MESH_ID"))
-// 	Node = &node{
-// 		MeshID: os.Getenv("MESH_ID"),
-// 	}
-// }
 
 // DumpNodeState prints the user and room information to stdout.
 func DumpNodeState() {

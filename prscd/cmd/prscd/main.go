@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"yomo.run/prscd/chirp"
 	"yomo.run/prscd/util"
 	"yomo.run/prscd/websocket"
 	"yomo.run/prscd/webtransport"
@@ -21,13 +20,6 @@ import (
 )
 
 var log = util.Log
-
-func init() {
-	chirp.AuthUserAndGetYoMoCredential = func(publicKey string) (appID, credential string, ok bool) {
-		log.Info("Node| auth_user: publicKey=%s", publicKey)
-		return "YOMO_APP", os.Getenv("YOMO_CREDENTIAL"), true
-	}
-}
 
 func main() {
 	// check if .env file is exists
@@ -68,10 +60,9 @@ func main() {
 
 	// load TLS cert and key, halt if error occurs,
 	// this helped developers to find out TLS related issues asap.
-	config, err := loadTLS(os.Getenv("CERT_FILE"), os.Getenv("KEY_FILE"), os.Getenv("DOMAIN"))
+	config, err := loadTLS(os.Getenv("CERT_FILE"), os.Getenv("KEY_FILE"))
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(-2)
 	}
 
 	// start WebSocket listener
@@ -125,7 +116,7 @@ func startYomoZipper() {
 	}
 }
 
-func loadTLS(certFile, keyFile, domain string) (*tls.Config, error) {
+func loadTLS(certFile, keyFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
