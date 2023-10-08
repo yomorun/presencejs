@@ -22,7 +22,7 @@ build:
 .PHONY: dist
 dist: clean
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags "-s -w" -o dist/prscd-x86_64-linux ./cmd/prscd
-	GOOS=linux GOARCH=arm64 $(GO) build -ldflags "-s -w" -o dist/prscd-arm64-linux ./cmd/prscd
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -ldflags "-s -w" -o dist/prscd-arm64-linux ./cmd/prscd
 	GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "-s -w" -o dist/prscd-x86_64-darwin ./cmd/prscd
 	GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "-s -w" -o dist/prscd-arm64-darwin ./cmd/prscd
 	GOOS=windows GOARCH=amd64 $(GO) build -ldflags "-s -w" -o dist/prscd-x86_64-windows.exe ./cmd/prscd
