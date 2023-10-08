@@ -16,16 +16,18 @@ import (
 	"yomo.run/prscd/util"
 )
 
-var log = util.Log
-
 const (
 	// Endpoint is the base path of service
 	Endpoint string = "/v1"
 )
 
+var log = util.Log
 var allRealms sync.Map
 
-func GetOrCreateRealm(appID string) (realm *node) {
+// AuthUserAndGetYoMoCredential is used to authenticate user by `publickey` and get credential used to connect to YoMo
+var AuthUserAndGetYoMoCredential func(publicKey string) (appID, credential string, ok bool)
+
+func GetOrCreateRealm(appID string, credential string) (realm *node) {
 	log.Debug("get or create realm: %s", appID)
 	res, ok := allRealms.LoadOrStore(appID, &node{
 		MeshID: os.Getenv("MESH_ID"),
@@ -35,15 +37,10 @@ func GetOrCreateRealm(appID string) (realm *node) {
 	if !ok {
 		log.Debug("create realm: %s", appID)
 		// connect to yomo zipper when created
-		res.(*node).ConnectToYoMo()
+		res.(*node).ConnectToYoMo(credential)
 	}
 
 	return res.(*node)
-}
-
-// TODO: can get credential used to connect to YoMo from db or config file or something else.
-func getYoMoCredential(appID string) string {
-	return os.Getenv("YOMO_CREDENTIAL")
 }
 
 type node struct {
@@ -54,13 +51,6 @@ type node struct {
 	MeshID string              // MeshID describes the id of this node
 	sndr   yomo.Source         // the yomo source used to send data to the geo-distributed network which built by yomo
 	rcvr   yomo.StreamFunction // the yomo stream function used to receive data from the geo-distributed network which built by yomo
-}
-
-// AuthUser is used by prscd authentication
-func AuthUser(publicKey string) (appID string, ok bool) {
-	log.Info("Node| auth_user: publicKey=%s", publicKey)
-	// return "YOMO_APP", true
-	return publicKey, true
 }
 
 // AddPeer add peer to channel named `cid` on this node.
@@ -115,7 +105,7 @@ func (n *node) FindChannel(name string) *Channel {
 }
 
 // ConnectToYoMo connect this node to the geo-distributed network which built by yomo.
-func (n *node) ConnectToYoMo() error {
+func (n *node) ConnectToYoMo(credential string) error {
 	// YOMO_ZIPPER env indicates the endpoint of YoMo Zipper to connect
 	log.Debug("[Realm:%s]connect to YoMo Zipper: %s", n.id, os.Getenv("YOMO_ZIPPER"))
 
@@ -130,7 +120,7 @@ func (n *node) ConnectToYoMo() error {
 	sndr := yomo.NewSource(
 		os.Getenv("YOMO_SNDR_NAME")+"-"+n.id,
 		os.Getenv("YOMO_ZIPPER"),
-		yomo.WithCredential(getYoMoCredential(n.id)),
+		yomo.WithCredential(credential),
 		yomo.WithTracerProvider(tp),
 	)
 
@@ -138,7 +128,7 @@ func (n *node) ConnectToYoMo() error {
 	rcvr := yomo.NewStreamFunction(
 		os.Getenv("YOMO_RCVR_NAME")+"-"+n.id,
 		os.Getenv("YOMO_ZIPPER"),
-		yomo.WithSfnCredential(getYoMoCredential(n.id)),
+		yomo.WithSfnCredential(credential),
 		yomo.WithSfnTracerProvider(tp),
 	)
 

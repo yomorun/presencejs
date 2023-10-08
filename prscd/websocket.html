@@ -12,7 +12,7 @@
     var uid = document.location.search.replace("?", "") || "ws-" + (Math.random() + 1).toString(36).substring(7)
 
     // Create WebSocket connection.
-    const socket = new WebSocket(`wss://${URL_DEBG}/v1?publickey=TOKEN-2&id=${uid}`);
+    const socket = new WebSocket(`wss://${URL_DEBG}/v1?publickey=PiHYRKapgfmHxthWmWlqpAcdYdxCtPtl2jmwrzig&id=${uid}`);
 
     // Change binary type from "blob" to "arraybuffer"
     socket.binaryType = "arraybuffer";

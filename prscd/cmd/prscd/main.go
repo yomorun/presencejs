@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"yomo.run/prscd/chirp"
 	"yomo.run/prscd/util"
 	"yomo.run/prscd/websocket"
 	"yomo.run/prscd/webtransport"
@@ -20,6 +21,13 @@ import (
 )
 
 var log = util.Log
+
+func init() {
+	chirp.AuthUserAndGetYoMoCredential = func(publicKey string) (appID, credential string, ok bool) {
+		log.Info("Node| auth_user: publicKey=%s", publicKey)
+		return "YOMO_APP", os.Getenv("YOMO_CREDENTIAL"), true
+	}
+}
 
 func main() {
 	// check if .env file is exists
@@ -37,16 +45,14 @@ func main() {
 		log.Fatal(errors.New("env check failed"))
 	}
 
-	// chirp.CreateNodeSingleton()
-
 	// DEBUG env indicates development mode, verbose log
 	if os.Getenv("DEBUG") == "true" {
 		log.SetLogLevel(util.DEBUG)
 		log.Debug("IN DEVELOPMENT ENV")
 	}
 
-	// AS_YOMO_ZIPPER env indicates start YOMO Zipper in this process
-	if os.Getenv("AS_YOMO_ZIPPER") == "true" {
+	// WITH_YOMO_ZIPPER env indicates start YOMO Zipper in this process
+	if os.Getenv("WITH_YOMO_ZIPPER") == "true" {
 		go startYomoZipper()
 		// sleep 2 seconds to wait for YoMo Zipper ready
 		time.Sleep(2 * time.Second)

@@ -1,6 +1,7 @@
 package chirp
 
 import (
+	"os"
 	"testing"
 
 	"github.com/yomorun/yomo/core/frame"
@@ -58,7 +59,7 @@ func (s *SenderMock) SetDataTag(tag frame.Tag) {}
 
 var channelName, peerName string
 var appID = "test_appid"
-var n = GetOrCreateRealm(appID)
+var n = GetOrCreateRealm(appID, os.Getenv("YOMO_CREDENTIAL"))
 
 func init() {
 	// mock YoMo Source
@@ -66,6 +67,10 @@ func init() {
 
 	channelName = "test_channel"
 	peerName = "test_peer"
+
+	AuthUserAndGetYoMoCredential = func(publicKey string) (appID, credential string, ok bool) {
+		return "YOMO_APP", os.Getenv("YOMO_CREDENTIAL"), true
+	}
 
 	// error level
 	util.Log.SetLogLevel(2)
@@ -121,8 +126,8 @@ func BenchmarkPeerJoinAndLeave(b *testing.B) {
 }
 
 func Test_node_AuthUser(t *testing.T) {
-	var wantAppID = "kmJAUnCtkWbkNnhXYtZAGEJzGDGpFo1e1vkp6cm"
-	gotAppID, gotOk := AuthUser(wantAppID)
+	var wantAppID = "YOMO_APP"
+	gotAppID, _, gotOk := AuthUserAndGetYoMoCredential(wantAppID)
 	if gotAppID != wantAppID {
 		t.Errorf("node.AuthUser() gotAppID = %v, want %v", gotAppID, wantAppID)
 	}
