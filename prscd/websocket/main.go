@@ -42,7 +42,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 
 	log.Info("Prscd - WebSocket Server - Listening on %s", ln.Addr())
 
-	var node = chirp.Node
+	// var node = chirp.Node
 
 	for {
 		// TCP has new connection
@@ -53,7 +53,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 			continue
 		}
 
-		var cuid, appID string // presencejs client user id
+		var cuid, appID, credential string // presencejs client user id
 
 		rejectionHeader := ws.RejectionHeader(ws.HandshakeHeaderString("X-Prscd-Version: v2\r\nX-Prscd-MeshID: " + os.Getenv("MESH_ID") + "\r\n"))
 
@@ -96,7 +96,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 					)
 				}
 				var ok bool
-				appID, ok = chirp.Node.AuthUser(authPublicKey)
+				appID, credential, ok = chirp.AuthUserAndGetYoMoCredential(authPublicKey)
 				if !ok {
 					return ws.RejectConnectionError(
 						ws.RejectionStatus(403),
@@ -104,7 +104,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 						ws.RejectionReason("illegal public key"),
 					)
 				}
-				log.Info("query.id: %s", cuid)
+				log.Info("query.id: %s | appID: %s", cuid, appID)
 				return nil
 			},
 			OnHeader: func(key, value []byte) error {
@@ -121,7 +121,7 @@ func ListenAndServe(addr string, config *tls.Config) {
 			},
 		}
 
-		// zero-copy resuse the TCP connection
+		// zero-copy reuse the TCP connection
 		p, err := u.Upgrade(conn)
 		if err != nil {
 			if err == io.EOF {
@@ -138,7 +138,6 @@ func ListenAndServe(addr string, config *tls.Config) {
 				}
 			}
 
-			// closeConn(conn, "886")
 			conn.Write(ws.CompiledClose)
 			conn.Close()
 			continue
@@ -146,9 +145,12 @@ func ListenAndServe(addr string, config *tls.Config) {
 
 		log.Info("[%s] upgrade success, start serving: %v", conn.RemoteAddr().String(), p)
 
+		// now, the authorization is done, we can create realm instance by appID
+		node := chirp.GetOrCreateRealm(appID, credential)
+
 		// create peer instance after Websocket handshake
 		pconn := chirp.NewWebSocketConnection(conn)
-		peer := node.AddPeer(pconn, cuid, appID)
+		peer := node.AddPeer(pconn, cuid)
 		log.Debug("[%s-%s] Upgrade done!", peer.Sid, peer.Cid)
 
 		keepaliveDone := make(chan bool)
@@ -203,8 +205,9 @@ func ListenAndServe(addr string, config *tls.Config) {
 						log.Info("[%s] >GOT CLOSE", peer.Sid)
 						peer.Disconnect()
 						wsutil.ControlFrameHandler(conn, ws.StateServerSide)
-						conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusNormalClosure, "bye"))))
-						conn.Close()
+						// conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusNormalClosure, "bye"))))
+						// conn.Close()
+						closeConn(conn, "bye")
 						return
 					}
 
@@ -225,8 +228,9 @@ func ListenAndServe(addr string, config *tls.Config) {
 				if header.OpCode == ws.OpText {
 					log.Error("Peer: %s sent text which not allowed", peer.Sid)
 					// https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1 1003
-					conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusUnsupportedData, "no text allowed"))))
+					// conn.Write(ws.MustCompileFrame(ws.NewCloseFrame(ws.NewCloseFrameBody(ws.StatusUnsupportedData, "no text allowed"))))
 					conn.Close()
+					closeConn(conn, "no text allowed")
 					break
 				}
 

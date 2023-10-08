@@ -121,7 +121,7 @@ r7/oGuX9EkpALjk4mvdGEtLyYLu4CRmHZFkhiIGDF+HliJqAlGW1awy/
 	}
 
 	// call loadTLS with test cert and key files
-	_, err = loadTLS(certFile.Name(), keyFile.Name(), "lo.yomo.dev")
+	_, err = loadTLS(certFile.Name(), keyFile.Name())
 
 	// check if tls cert is expired
 	if err == nil {
@@ -135,7 +135,7 @@ r7/oGuX9EkpALjk4mvdGEtLyYLu4CRmHZFkhiIGDF+HliJqAlGW1awy/
 
 func TestLoadCurrentTLSCert(t *testing.T) {
 	// call loadTLS with test cert and key files
-	_, err := loadTLS("../../lo.yomo.dev.cert", "../../lo.yomo.dev.key", "lo.yomo.dev")
+	_, err := loadTLS("../../lo.yomo.dev.cert", "../../lo.yomo.dev.key")
 
 	// check if tls cert is expired
 	if err != nil {

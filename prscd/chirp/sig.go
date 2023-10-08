@@ -1,6 +1,10 @@
 package chirp
 
-import "github.com/yomorun/psig"
+import (
+	"os"
+
+	"github.com/yomorun/psig"
+)
 
 // NewSigPeerOnline create OpPeerOnline message.
 func NewSigPeerOnline(chid string, p *Peer) *psig.Signalling {
@@ -30,6 +34,6 @@ func NewSigChannelJoined(chName string) *psig.Signalling {
 		Type:    psig.SigControl,
 		OpCode:  psig.OpChannelJoin,
 		Channel: chName,
-		MeshID:  Node.MeshID,
+		MeshID:  os.Getenv("MESH_ID"),
 	}
 }

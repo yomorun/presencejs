@@ -107,7 +107,7 @@ func handleConnection(sess quic.Connection) {
 		return
 	}
 
-	appID, ok := chirp.Node.AuthUser(publicKey)
+	appID, credential, ok := chirp.AuthUserAndGetYoMoCredential(publicKey)
 	if !ok {
 		status = 401
 	}
@@ -129,7 +129,10 @@ func handleConnection(sess quic.Connection) {
 
 	// Step 5: start to processing presencejs protocol
 	pconn := chirp.NewWebTransportConnection(sess)
-	peer := chirp.Node.AddPeer(pconn, userID, appID)
+	// now, the authorization is done, we can create realm instance by appID
+	node := chirp.GetOrCreateRealm(appID, credential)
+
+	peer := node.AddPeer(pconn, userID)
 	log.Info("[%s-%s] Upgrade done!", peer.Sid, peer.Cid)
 
 	// TODO: send `connected_ack` signalling to client
@@ -166,7 +169,7 @@ func handleConnection(sess quic.Connection) {
 	}
 }
 
-// [3]: wait for reading client HTTP CONNECT (client indicatation)
+// [3]: wait for reading client HTTP CONNECT (client indication)
 // https://datatracker.ietf.org/doc/html/draft-ietf-webtrans-http3/#section-3.3
 // In order to create a new WebTransport session, a client can send an
 // HTTP CONNECT request.  The :protocol pseudo-header field ([RFC8441])
