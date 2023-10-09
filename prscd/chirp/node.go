@@ -106,7 +106,7 @@ func (n *node) ConnectToYoMo(credential string) error {
 	log.Debug("[Realm:%s]connect to YoMo Zipper: %s", n.id, os.Getenv("YOMO_ZIPPER"))
 
 	// add open tracing
-	tp, shutdown, err := trace.NewTracerProviderWithJaeger("prscd")
+	tp, shutdown, err := trace.NewTracerProvider("prscd")
 	if err == nil {
 		log.Info("[%s] 🛰 trace enabled", "prscd")
 	}
