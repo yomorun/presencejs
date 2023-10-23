@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -160,7 +159,7 @@ func (n *node) ConnectToYoMo(credential string) error {
 			channel.Dispatch(sig)
 			log.Debug("[\u21CA]\t dispatched to %s", sig.Cid)
 		} else {
-			log.Debug("[\u21CA]\t dispatch to channel failed cause of not exist: %s", sig.Cid)
+			log.Debug("[\u21CA]\t dispatch to channel failed cause of not exist: %s", sig.Channel)
 		}
 	}
 
@@ -223,7 +222,8 @@ func DumpConnectionsState() {
 	log.Info("Dump start --------")
 	counter := make(map[string]int)
 
-	allRealms.Range(func(appID, realm interface{}) bool {
+	allRealms.Range(func(appIDStr, realm interface{}) bool {
+		appID := appIDStr.(string)
 		log.Info("Realm:%s", appID)
 		realm.(*node).cdic.Range(func(k1, v1 interface{}) bool {
 			log.Info("\tChannel:%s", k1)
@@ -231,7 +231,7 @@ func DumpConnectionsState() {
 			ch := v1.(*Channel)
 			peersCount := ch.getLen()
 			// chName is like "appID|channelName", so we need to split it to get appID
-			appID := strings.Split(chName, "|")[0]
+			// appID := strings.Split(chName, "|")[0]
 			log.Info("\t\t[%s] %s Peers count: %d", appID, chName, peersCount)
 			if _, ok := counter[appID]; !ok {
 				counter[appID] = peersCount
