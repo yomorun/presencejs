@@ -11,7 +11,7 @@ Live collaborator avatars for multiplayer web apps
 Install with npm:
 
 ```
-$ npm i --save @yomo/group-hug-react
+npm i --save @yomo/group-hug-react
 ```
 
 Create a [Presence](https://github.com/yomorun/presencejs) instance
@@ -93,7 +93,7 @@ Here are the full props:
 
 | name                  | type                 | description                                                                                               |
 | --------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
-| presence              | Promise<IPresence>   | The Presence instance                                                                                     |
+| presence              | Promise\<IPresence>   | The Presence instance                                                                                     |
 | channel               | string               | The channel name of the Presence instance                                                                 |
 | id                    | string               | The unique identifier of the user                                                                         |
 | name                  | string               | The name or display name of the user                                                                      |
