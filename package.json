@@ -9,7 +9,7 @@
     "webtransport"
   ],
   "license": "MIT",
-  "workspaces": ["packages/presence", "packages/group-hug-react", "packages/grouphug-builder"],
+  "workspaces": ["packages/presence", "packages/group-hug-react"],
   "scripts": {
     "prscd:dev": "cd ./prscd && make dev"
   },

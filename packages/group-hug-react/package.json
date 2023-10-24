@@ -28,7 +28,7 @@
     },
     "dependencies": {
         "@radix-ui/react-avatar": "^1.0.4",
-        "@yomo/presence": "^2.2.18",
+        "@yomo/presence": "workspace:*",
         "avvvatars-react": "^0.4.2",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.0.0",
