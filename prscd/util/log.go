@@ -34,7 +34,7 @@ func (l *plog) Inspect(format string, a ...any) {
 	if l.logLevel > INFO {
 		return
 	}
-	_, _ = fmt.Fprintf(os.Stdout, format+"\r", a...)
+	_, _ = fmt.Fprintf(os.Stdout, "\r\033[K"+format+"\r", a...)
 }
 
 // Error prints log to stderr.
