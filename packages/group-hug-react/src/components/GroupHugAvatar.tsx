@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Avvvatars from 'avvvatars-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { User } from '../../types';
 
 const TextAvatar = ({

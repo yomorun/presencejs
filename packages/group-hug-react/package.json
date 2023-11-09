@@ -12,8 +12,9 @@
   ],
   "license": "MIT",
   "type": "module",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "files": [
     "dist"
   ],
@@ -35,7 +36,7 @@
   "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist/ && prettier src/ --write && bun run build:esm && bun run build:cjs",
+    "build": "rm -rf dist/ && prettier src/ --write && npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc --module CommonJS --outDir dist/cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

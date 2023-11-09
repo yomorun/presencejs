@@ -1,5 +1,5 @@
 import { IChannel } from '@yomo/presence';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GroupHugProps, User } from '../types';
 import { GroupHug } from './components/GroupHug';
 
