@@ -191,6 +191,11 @@ func (n *node) BroadcastToYoMo(sig *psig.Signalling) {
 		return
 	}
 
+	if n.sndr == nil {
+		log.Error("************** n.sndr is nil")
+		return
+	}
+
 	err = n.sndr.Write(0x20, buf)
 	if err != nil {
 		log.Error("broadcast to yomo error: %+v", err)
