@@ -17,8 +17,8 @@ function App({
   id,
   maximum = 5,
   name,
-  onMouseEnter = () => {},
-  onMouseLeave = () => {},
+  onMouseEnter = () => { },
+  onMouseLeave = () => { },
   // overlapping = true,
   placeholder = 'shape',
   popover,
@@ -39,41 +39,47 @@ function App({
   });
 
   useEffect(() => {
+    console.debug('[GroupHug] app load', presence === null);
     if (presence === null) {
-      console.warn('GroupHug: presence is required');
+      console.warn('[GroupHug] presence is required');
       return;
     }
     if (!channel) {
-      console.warn('GroupHug: channel is required');
+      console.warn('[GroupHug] channel is required');
       return;
     }
 
-    (async () => {
-      try {
-        const yomo = await presence;
-        const tempChannel = await yomo.joinChannel(channel, myState);
-        setCh(tempChannel);
-      } catch (error) {
-        console.log(error);
-      }
-    })();
-
-    const selfVisibilityChange = () =>
+    const selfVisibilityChange = () => {
       setMyState((prevState) => {
         return { ...prevState, state: document.hidden ? 'away' : 'online' };
       });
-    document.addEventListener('visibilitychange', selfVisibilityChange);
+    }
+
+    presence.joinChannel(channel, myState).then((ch) => {
+      setCh(ch);
+      console.debug('[GroupHug] joinChannel success!', ch.id);
+      document.addEventListener('visibilitychange', selfVisibilityChange);
+    });
+
+    presence.on('closed', () => {
+      console.debug('[GroupHug] connection closed');
+      setPeers([]);
+    })
 
     return () => {
       document.removeEventListener('visibilitychange', selfVisibilityChange);
+      console.debug('[GroupHug] unmount', 'ch.leave()', ch?.id);
       ch?.leave();
     };
-  }, []);
+  }, [presence]);
 
   useEffect(() => {
     if (!ch) return;
 
-    ch?.subscribePeers((peers) => setPeers(peers as User[]));
+    ch?.subscribePeers((peers) => {
+      console.debug('[GroupHug] subscribePeers', peers)
+      setPeers(peers as User[])
+    });
 
     ch?.subscribe('change-state', (p: User) => {
       setPeers((prevPeers) => {

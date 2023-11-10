@@ -15,7 +15,7 @@ const signalingEncode = (data: Signaling) => encode(data);
 
 export class Channel implements IChannel {
   #transport: any;
-  #state: State;
+  state: State;
   #subscribers = new Map<string, ChannelEventSubscribeCallbackFn<any>>();
   #members: State[] = [];
   #peers: Peers | null = null;
@@ -35,7 +35,7 @@ export class Channel implements IChannel {
     }
   ) {
     this.id = id;
-    this.#state = state;
+    this.state = state;
     this.#transport = transport;
     this.#logger = new Logger({
       enabled: options.debug,
@@ -95,7 +95,8 @@ export class Channel implements IChannel {
       op: 'peer_offline',
       c: this.id,
     });
-    // this.#transport.close();
+    this.#members = [];
+    this.#peers?.trigger(this.#members);
   }
 
   on(event: 'join', callbackFn: Function) {
@@ -109,7 +110,7 @@ export class Channel implements IChannel {
       t: 'control',
       op: 'channel_join',
       c: this.id,
-      pl: encode(this.#state),
+      pl: encode(this.state),
     });
   }
 
@@ -125,16 +126,16 @@ export class Channel implements IChannel {
 
   // #write(data: Uint8Array) {
   #write(sig: Signaling) {
-    this.#logger.log('write sig: ', sig);
+    this.#logger.log(`sig[${sig.t}]->`, `c: ${sig.c}, op: ${sig.op}, pl: ${sig.pl?.byteLength}`);
     const data = signalingEncode(sig);
     if (!this.#writer) {
-      if (this.#transport.datagrams.writable.locked) {
-        try {
-          this.#transport.datagrams.writable.releaseLock();
-        } catch (e) {
-          this.#logger.log('release lock error: ', e)
-        }
-      }
+      // if (this.#transport.datagrams.writable.locked) {
+      //   try {
+      //     this.#transport.datagrams.writable.releaseLock();
+      //   } catch (e) {
+      //     this.#logger.log('release lock error: ', e)
+      //   }
+      // }
       if (this.#reliable) {
         this.#writer = this.#transport.createSendStream().getWriter();
       } else {
@@ -203,7 +204,7 @@ export class Channel implements IChannel {
 
   // [receive] signal: peer_online
   #handlePeerOnline(id: string) {
-    if (id !== this.#state.id) {
+    if (id !== this.state.id) {
       const idx = this.#members.findIndex((member) => member.id === id);
       if (idx > -1) {
         this.#members[idx] = { id };
@@ -218,7 +219,8 @@ export class Channel implements IChannel {
 
   // [receive] signal: peer_state
   #handlePeerState(peer: State) {
-    if (peer.id !== this.#state.id) {
+    this.#logger.log('#handlePeerState', { peer });
+    if (peer.id !== this.state.id) {
       const idx = this.#members.findIndex((member) => {
         return String(member.id) === String(peer.id);
       });
@@ -248,14 +250,14 @@ export class Channel implements IChannel {
       op: 'peer_state',
       c: this.id,
       // p: this.#state.id,
-      pl: encode(this.#state),
+      pl: encode(this.state),
     })
   }
 
   // [receive] signal: peer_offline
   #handlePeerOffline(id: string) {
     this.#logger.log(`offline id: ${id}`);
-    if (id !== this.#state.id) {
+    if (id !== this.state.id) {
       const idx = this.#members.findIndex((member) => {
         return member.id === id;
       });

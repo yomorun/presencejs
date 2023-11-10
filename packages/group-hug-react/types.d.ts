@@ -3,7 +3,7 @@ import { IPresence } from '@yomo/presence';
 import React from 'react';
 
 export type GroupHugProps = {
-  presence: Promise<IPresence>;
+  presence: IPresence | null;
   // channel id
   channel: string;
   id: string;

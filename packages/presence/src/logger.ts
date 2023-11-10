@@ -15,7 +15,6 @@ export class Logger {
   log(...args: any) {
     if (this.enabled) {
       console.log(`[${this.module}]`, ...args);
-      // console.log('------------------')
     }
   }
 }
