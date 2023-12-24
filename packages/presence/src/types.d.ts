@@ -105,6 +105,7 @@ export type JsonSerializable =
 
 export interface IChannel {
   id: string;
+  state: State;
   broadcast<T extends JsonSerializable>(event: string, data: T): void;
   subscribe<T extends JsonSerializable>(
     event: string,

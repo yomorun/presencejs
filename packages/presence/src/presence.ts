@@ -66,6 +66,7 @@ export class Presence implements IPresence {
         this.#logger.log('wt.ready.then', 'connected');
         // window.p = this.#conn;
         this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
+        this.#rejoinChannels();
         this.#onReadyCallbackFn();
       })
       .catch((e: Error) => {
@@ -80,6 +81,7 @@ export class Presence implements IPresence {
           this.#logger.log('\twt.closed.then', this.#onClosedCallbackFn);
           this.#onClosedCallbackFn();
         }
+        // leave all channels
         this.#channels.forEach((channel) => {
           this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
           channel.leave();
@@ -112,9 +114,9 @@ export class Presence implements IPresence {
           this.#retryCount++;
           this.#conn.ready
             .then(() => {
-              this.#logger.log('ws.ready.then', 'connected')
+              this.#logger.log('ws.ready.then', 'connected');
               this.#notifyConnectionStatusChange(ConnectionStatus.OPEN, 'Connection established successfully.');
-              // window.p = this.#conn;
+              this.#rejoinChannels();
               this.#onReadyCallbackFn();
             })
             .catch((pp: Error) => {
@@ -128,17 +130,18 @@ export class Presence implements IPresence {
             .catch((pp: Error) => {
               this.#logger.log('ws.closed.catch', pp)
               this.#logger.log('START Reconnect.......', this.#retryInterval);
+              this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
               setTimeout(() => {
-                this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
+                this.#retryCount++;
                 this.#connect();
               }, this.#retryInterval);
             });
         } else {
-          this.#logger.log('connect.downgrade', 'not to websocket');
+          this.#logger.log('connect.downgrade = false', 'retry ');
           this.#retryCount++;
-          this.#logger.log('[ws] START Reconnect.......', this.#retryInterval);
+          this.#logger.log('[wt] START Reconnect.......', this.#retryInterval);
+          this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
           setTimeout(() => {
-            this.#notifyConnectionStatusChange(ConnectionStatus.CLOSED, 'Connection has been disconnected.');
             this.#connect();
           }, this.#retryInterval);
         }
@@ -194,6 +197,19 @@ export class Presence implements IPresence {
     if (channel) {
       channel.leave();
     }
+  }
+
+  // re-join channel after reconnected
+  #rejoinChannels() {
+    this.#logger.log('rejoin after connect', this.#channels);
+    this.#channels.forEach((channel) => {
+      this.joinChannel(channel.id, channel.state).then((ch) => {
+        this.#logger.log(`rejoin ${ch.id} success`);
+      }).catch((err) => {
+        this.#logger.log(`rejoin ${channel.id} err:`, err);
+      });
+    })
+
   }
 
   on(status: ConnectionStatus, cb: ConnectionStatusCallback) {

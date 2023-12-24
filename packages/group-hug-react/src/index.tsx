@@ -1,4 +1,4 @@
-import GroupHug from './App.tsx';
+import GroupHug from './App';
 import './index.css';
 
 export default GroupHug;

@@ -17,7 +17,7 @@
     "node": ">=10"
   },
   "author": "https://yomo.run",
-  "devDependencies": {},
+  "devDependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yomorun/presencejs.git"
