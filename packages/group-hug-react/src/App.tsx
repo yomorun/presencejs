@@ -17,8 +17,8 @@ function App({
   id,
   maximum = 5,
   name,
-  onMouseEnter = () => { },
-  onMouseLeave = () => { },
+  onMouseEnter = () => {},
+  onMouseLeave = () => {},
   // overlapping = true,
   placeholder = 'shape',
   popover,
@@ -53,7 +53,7 @@ function App({
       setMyState((prevState) => {
         return { ...prevState, state: document.hidden ? 'away' : 'online' };
       });
-    }
+    };
 
     presence.joinChannel(channel, myState).then((ch) => {
       setCh(ch);
@@ -61,10 +61,11 @@ function App({
       document.addEventListener('visibilitychange', selfVisibilityChange);
     });
 
+    // @ts-expect-error TODO: export connection status
     presence.on('closed', () => {
       console.debug('[GroupHug] connection closed');
       setPeers([]);
-    })
+    });
 
     return () => {
       document.removeEventListener('visibilitychange', selfVisibilityChange);
@@ -77,8 +78,8 @@ function App({
     if (!ch) return;
 
     ch?.subscribePeers((peers) => {
-      console.debug('[GroupHug] subscribePeers', peers)
-      setPeers(peers as User[])
+      console.debug('[GroupHug] subscribePeers', peers);
+      setPeers(peers as User[]);
     });
 
     ch?.subscribe('change-state', (p: User) => {
