@@ -12,19 +12,20 @@
   ],
   "license": "MIT",
   "type": "module",
-  "main": "dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./types.d.ts",
-      "import": "./dist/index.mjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./package.json": "./package.json",
-    "./types.d.ts": "./types.d.ts"
+    "./style.css": "./dist/style.css"
   },
   "repository": {
     "type": "git",
@@ -36,9 +37,7 @@
   "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist/ && prettier src/ --write && npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --module CommonJS --outDir dist/cjs",
+    "build": "rm -rf dist/ && prettier src/ --write && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -69,6 +68,7 @@
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.2",
     "vite": "^4.4.5",
+    "vite-plugin-dts": "^3.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

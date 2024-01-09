@@ -74,7 +74,7 @@ export class Presence implements IPresence {
       });
 
     conn.closed
-      .then((p) => {
+      .then((p: any) => {
         // user call close() method
         this.#logger.log('wt.closed.then', p);
         if (this.#onClosedCallbackFn) {
