@@ -37,7 +37,7 @@
   "homepage": "https://github.com/yomorun/presencejs/tree/main/packages/group-hug-react#readme",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist/ && prettier src/ --write && vite build && cp types.d.ts dist/index.d.ts",
+    "build": "rm -rf dist/ && prettier src/ --write && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -49,7 +49,8 @@
     "clsx": "^2.0.0",
     "lucide-react": "^0.288.0",
     "tailwind-merge": "^1.14.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "vite-plugin-dts": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.8.7",
